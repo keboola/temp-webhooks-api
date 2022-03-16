@@ -7,11 +7,16 @@ import (
 	stdLog "log"
 	"time"
 
+	"github.com/avast/retry-go/v4"
 	"github.com/keboola/temp-webhooks-api/internal/pkg/api/storageapi"
 	"github.com/keboola/temp-webhooks-api/internal/pkg/env"
 	"github.com/keboola/temp-webhooks-api/internal/pkg/log"
 	"github.com/keboola/temp-webhooks-api/internal/pkg/model"
+	"github.com/keboola/temp-webhooks-api/internal/pkg/storage"
 	"github.com/keboola/temp-webhooks-api/internal/pkg/webhooks/api/gen/webhooks"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
+	gormLogger "gorm.io/gorm/logger"
 )
 
 const WebhookCheckInterval = 5 * time.Second
@@ -21,24 +26,35 @@ type Service struct {
 	host       string
 	envs       *env.Map
 	logger     log.Logger
-	storage    *model.Storage
+	storage    *storage.Storage
 	storageApi *storageapi.Api
 }
 
-func New(ctx context.Context, envs *env.Map, stdLogger *stdLog.Logger) webhooks.Service {
+func New(ctx context.Context, envs *env.Map, stdLogger *stdLog.Logger) (webhooks.Service, error) {
 	logger := log.NewApiLogger(stdLogger, "", false)
+
+	// Load ENVs
 	storageApiHost := envs.MustGet("KBC_STORAGE_API_HOST")
+	serviceHost := envs.MustGet("SERVICE_HOST")
+	mysqlDsn := envs.MustGet("SERVICE_MYSQL_DSN")
+
+	// Connect to DB
+	db, err := connectToDb(mysqlDsn, stdLogger)
+	if err != nil {
+		return nil, err
+	}
+
 	s := &Service{
 		ctx:        ctx,
-		host:       "localhost:8888",
+		host:       serviceHost,
 		envs:       envs,
 		logger:     logger,
-		storage:    model.NewStorage(),
+		storage:    storage.New(db, logger),
 		storageApi: storageapi.New(context.Background(), logger, storageApiHost, false),
 	}
 
 	s.StartCron()
-	return s
+	return s, nil
 }
 
 func (s *Service) StartCron() {
@@ -120,4 +136,23 @@ func (s *Service) Register(_ context.Context, payload *webhooks.RegisterPayload)
 	url := webhook.Url(s.host)
 	s.logger.Infof("REGISTERED webhook, tableId=\"%s\"", webhook.TableId)
 	return &webhooks.RegistrationResult{URL: url}, nil
+}
+
+func connectToDb(mysqlDsn string, logger *stdLog.Logger) (db *gorm.DB, err error) {
+	// Prepare
+	dsn := mysqlDsn + "?timeout=10s&charset=utf8mb4&parseTime=True&loc=UTC"
+	dbLogger := gormLogger.New(logger, gormLogger.Config{Colorful: false})
+	dbConfig := &gorm.Config{Logger: dbLogger}
+
+	// Connect with retry
+	err = retry.Do(func() error {
+		db, err = gorm.Open(mysql.Open(dsn), dbConfig)
+		return err
+	}, retry.Attempts(10), retry.Delay(2*time.Second), retry.DelayType(retry.FixedDelay))
+
+	// Log
+	if err == nil {
+		logger.Printf(`DB connected to database "%s"`, db.Name())
+	}
+	return
 }

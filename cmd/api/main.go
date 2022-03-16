@@ -26,7 +26,7 @@ func main() {
 	flag.Parse()
 
 	// Setup logger.
-	logger := log.New(os.Stderr, "[templatesApi][server]", 0)
+	logger := log.New(os.Stderr, "[webhooks] ", 0)
 
 	// Envs.
 	envs, err := env.FromOs()
@@ -36,14 +36,21 @@ func main() {
 	}
 
 	// Start server
-	start(*httpHostF, *httpPortF, *debugF, logger, envs)
+	if err := start(*httpHostF, *httpPortF, *debugF, logger, envs); err != nil {
+		logger.Println(err.Error())
+		os.Exit(1)
+	}
 }
 
-func start(host, port string, debug bool, logger *log.Logger, envs *env.Map) {
+func start(host, port string, debug bool, logger *log.Logger, envs *env.Map) error {
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	// Initialize the service.
-	svc := service.New(ctx, envs, logger)
+	svc, err := service.New(ctx, envs, logger)
+	if err != nil {
+		return err
+	}
 
 	// Wrap the services in endpoints that can be invoked from other services
 	// potentially running in different processes.
@@ -77,4 +84,5 @@ func start(host, port string, debug bool, logger *log.Logger, envs *env.Map) {
 	// Wait for goroutines.
 	wg.Wait()
 	logger.Println("exited")
+	return nil
 }

@@ -5,20 +5,20 @@ import (
 	"sync"
 )
 
-type Hash string
+type WebhookHash string
 
-type WebhooksMap map[Hash]*Webhook
+type WebhooksMap map[WebhookHash]*Webhook
 
 type Webhook struct {
 	lock       *sync.Mutex
 	Token      string
 	TableId    string
-	Hash       Hash
+	Hash       WebhookHash
 	Conditions Conditions
 	File       *CsvFile
 }
 
-func NewWebhook(token, tableId string, hash Hash, conditions Conditions) (*Webhook, error) {
+func NewWebhook(token, tableId string, hash WebhookHash, conditions Conditions) (*Webhook, error) {
 	f, err := NewCsvFile([]string{"Body"})
 	if err != nil {
 		return nil, err

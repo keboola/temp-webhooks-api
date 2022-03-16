@@ -13,16 +13,26 @@ services:
       - TEST_KBC_STORAGE_API_HOST
       - TEST_KBC_STORAGE_API_TOKEN
 
+  mysql:
+    image: mariadb:10
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: user
+      MYSQL_PASSWORD: pass
+      MYSQL_DATABASE: db
+
   api:
     build:
       context: .
       dockerfile: Dockerfile-api
-    depends_on:
-      - dev
+    links:
+      - mysql
     ports:
       - "8888:8888"
     environment:
       - KBC_STORAGE_API_HOST
+      - SERVICE_HOST=localhost:8888
+      - SERVICE_MYSQL_DSN=user:pass@tcp(mysql:3306)/db
 
 volumes:
   cache:

@@ -37,9 +37,21 @@ var index = ResultType("application/vnd.webhooks.index", func() {
 	})
 })
 
-var registration = ResultType("application/vnd.webhooks.registration", func() {
-	Description("Registration response")
-	TypeName("Registration")
+var importResult = ResultType("application/vnd.webhooks.import.result", func() {
+	Description("Import result")
+	TypeName("ImportResult")
+
+	Attributes(func() {
+		Attribute("waitingForImport", Int, "Number of records that have not yet been imported into the table.", func() {
+			Example(123)
+		})
+		Required("waitingForImport")
+	})
+})
+
+var registerResult = ResultType("application/vnd.webhooks.register.result", func() {
+	Description("Registration result")
+	TypeName("RegistrationResult")
 
 	Attributes(func() {
 		Attribute("url", String, "Webhook url", func() {
@@ -101,7 +113,7 @@ var _ = Service("webhooks", func() {
 			})
 			Required("tableId", "token")
 		})
-		Result(registration)
+		Result(registerResult)
 		HTTP(func() {
 			POST("register")
 			Response(StatusOK)
@@ -109,23 +121,22 @@ var _ = Service("webhooks", func() {
 	})
 
 	Method("import", func() {
-		NoSecurity()
 		Payload(func() {
-			Field(1, "hash", String, "Authorization hash")
-			Field(2, "body", String, "Raw request body")
+			Field(1, "hash", String, "Authorization hash", func() {
+				Example("yljBSN5QmXRXFFs5Y7GEY")
+			})
+			Field(2, "body", String, "Raw request body", func() {
+				Example("Content to be imported.")
+			})
 			Required("hash", "body")
 		})
-		Result(String, func() {
-			Example("OK")
-		})
+		Result(importResult)
 		HTTP(func() {
 			POST("import/{hash}")
 			Body(func() {
 				Attribute("body")
 			})
-			Response(StatusOK, func() {
-				ContentType("text/plain")
-			})
+			Response(StatusOK)
 		})
 	})
 

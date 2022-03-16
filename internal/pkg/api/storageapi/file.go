@@ -1,6 +1,8 @@
 package storageapi
 
 import (
+	"fmt"
+
 	"github.com/go-resty/resty/v2"
 	"github.com/keboola/temp-webhooks-api/internal/pkg/http/client"
 	"github.com/keboola/temp-webhooks-api/internal/pkg/model"

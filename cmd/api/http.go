@@ -13,6 +13,7 @@ import (
 	"github.com/keboola/temp-webhooks-api/api/webhooks/gen"
 	webhooksSvr "github.com/keboola/temp-webhooks-api/internal/pkg/webhooks/api/gen/http/webhooks/server"
 	"github.com/keboola/temp-webhooks-api/internal/pkg/webhooks/api/gen/webhooks"
+	swaggerui "github.com/keboola/temp-webhooks-api/third_party"
 	goaHTTP "goa.design/goa/v3/http"
 	httpMiddleware "goa.design/goa/v3/http/middleware"
 	"goa.design/goa/v3/middleware"
@@ -38,7 +39,8 @@ func handleHTTPServer(ctx context.Context, wg *sync.WaitGroup, u *url.URL, endpo
 	// responses.
 	eh := errorHandler(logger)
 	docsFS := http.FS(gen.DocsFS)
-	templatesServer := webhooksSvr.New(endpoints, mux, dec, enc, eh, nil, docsFS, docsFS, docsFS, docsFS)
+	swaggerFS := http.FS(swaggerui.SwaggerFS)
+	templatesServer := webhooksSvr.New(endpoints, mux, dec, enc, eh, nil, docsFS, docsFS, docsFS, docsFS, swaggerFS)
 	if debug {
 		servers := goaHTTP.Servers{templatesServer}
 		servers.Use(httpMiddleware.Debug(mux, os.Stdout))

@@ -82,13 +82,17 @@ var _ = Service("webhooks", func() {
 		NoSecurity()
 		Payload(func() {
 			Field(1, "hash", String, "Authorization hash")
-			Required("hash")
+			Field(2, "body", String, "Raw request body")
+			Required("hash", "body")
 		})
 		Result(String, func() {
 			Example("OK")
 		})
 		HTTP(func() {
 			GET("import/{hash}")
+			Body(func() {
+				Attribute("body")
+			})
 			Response(StatusOK, func() {
 				ContentType("text/plain")
 			})

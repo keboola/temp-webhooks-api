@@ -5,6 +5,7 @@ go 1.17
 require (
 	github.com/ActiveState/vt10x v1.3.1
 	github.com/Netflix/go-expect v0.0.0-20220104043353-73e0943537d2
+	github.com/aws/aws-sdk-go v1.43.19
 	github.com/cenkalti/backoff/v4 v4.1.2
 	github.com/go-resty/resty/v2 v2.7.0
 	github.com/hashicorp/go-multierror v1.1.1
@@ -19,6 +20,8 @@ require (
 	goa.design/goa/v3 v3.6.2
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 )
+
+require github.com/jmespath/go-jmespath v0.4.0 // indirect
 
 require (
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d

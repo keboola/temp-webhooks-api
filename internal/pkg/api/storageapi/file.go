@@ -43,7 +43,8 @@ func (a *Api) PostCreateFileResource(name string) *client.Request {
 	return a.
 		NewRequest(resty.MethodPost, "files/prepare").
 		SetFormBody(map[string]string{
-			"name": name,
+			"name":            name,
+			"federationToken": "true",
 		}).
 		SetResult(&model.FileResource{})
 }

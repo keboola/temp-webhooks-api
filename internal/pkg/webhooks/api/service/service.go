@@ -18,7 +18,7 @@ func New(envs *env.Map) webhooks.Service {
 func (s *Service) IndexRoot(_ context.Context) (res *webhooks.Index, err error) {
 	res = &webhooks.Index{
 		API:           "webhooks",
-		Documentation: "https://webhooks.keboola.com/v1/documentation",
+		Documentation: "https://webhooks.keboola.com/documentation",
 	}
 	return res, nil
 }

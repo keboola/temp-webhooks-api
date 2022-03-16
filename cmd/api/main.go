@@ -21,7 +21,7 @@ import (
 func main() {
 	// Flags.
 	httpHostF := flag.String("http-host", "0.0.0.0", "HTTP host")
-	httpPortF := flag.String("http-port", "8000", "HTTP port")
+	httpPortF := flag.String("http-port", "8888", "HTTP port")
 	debugF := flag.Bool("debug", false, "Log request and response bodies")
 	flag.Parse()
 

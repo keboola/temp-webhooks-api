@@ -11,7 +11,6 @@ var _ = API("webhooks", func() {
 	Description("A service for webhooks.")
 	Version("1.0")
 	HTTP(func() {
-		Path("v1")
 		Consumes("application/json")
 		Produces("application/json")
 	})
@@ -35,7 +34,7 @@ var index = ResultType("application/vnd.templates.index", func() {
 			Example("webhooks")
 		})
 		Attribute("documentation", String, "Url of the API documentation", func() {
-			Example("https://webhooks.keboola.com/v1/documentation")
+			Example("https://webhooks.keboola.com/documentation")
 		})
 		Required("api", "documentation")
 	})
@@ -49,7 +48,7 @@ var _ = Service("webhooks", func() {
 		Result(index)
 		NoSecurity()
 		HTTP(func() {
-			GET("")
+			GET("/")
 			Response(StatusOK)
 		})
 	})
@@ -60,7 +59,7 @@ var _ = Service("webhooks", func() {
 			Example("OK")
 		})
 		HTTP(func() {
-			GET("//health-check")
+			GET("/health-check")
 			Response(StatusOK, func() {
 				ContentType("text/plain")
 			})

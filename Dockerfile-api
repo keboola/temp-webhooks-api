@@ -1,22 +1,21 @@
 # Build container
-FROM golang:1.17 AS buildContainer
+FROM keboolabot/webhooks-dev AS buildContainer
+
 WORKDIR /go/src/app
 COPY . .
-#flags: -s -w to remove symbol table and debug info
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -v -mod mod -ldflags "-s -w" -o ./api ./cmd/api
 
-# SSL certificates container
-FROM alpine as sslCerts
-RUN apk add -U --no-cache ca-certificates
+RUN make generate-api
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -v -mod mod -ldflags "-s -w" -o /tmp/api ./cmd/api
 
 # Production container
-FROM scratch
-COPY --from=sslCerts /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY --from=buildContainer /go/src/app/api /app/api
+FROM alpine
+RUN apk add -U --no-cache ca-certificates
+
+COPY --from=buildContainer /tmp/api /app/api
 WORKDIR /app
 
 ENV HOST 0.0.0.0
 ENV PORT 8000
 EXPOSE 8000
 
-CMD ["/app/api", "--http-host=0.0.0.0", "--http-port=8000"]
+CMD ["/app/api", "--http-host=0.0.0.0", "--http-port=8888"]

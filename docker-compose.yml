@@ -1,7 +1,7 @@
 version: '3'
 services:
   dev:
-    image: keboolabot/keboola-as-code-dev
+    image: keboolabot/webhooks-dev
     build: .
     volumes:
       - ./:/code:z
@@ -11,8 +11,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile-api
+    depends_on:
+      - dev
     ports:
-      - "8000:8000"
+      - "8888:8888"
     environment:
       - KBC_STORAGE_API_HOST
 

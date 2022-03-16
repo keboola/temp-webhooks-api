@@ -66,6 +66,7 @@ var _ = Service("webhooks", func() {
 
 	// Methods
 	Method("index-root", func() {
+		Meta("swagger:summary", "API information.")
 		Result(index)
 		NoSecurity()
 		HTTP(func() {
@@ -75,6 +76,7 @@ var _ = Service("webhooks", func() {
 	})
 
 	Method("health-check", func() {
+		Meta("swagger:summary", "Health check.")
 		NoSecurity()
 		Result(String, func() {
 			Example("OK")
@@ -88,6 +90,7 @@ var _ = Service("webhooks", func() {
 	})
 
 	Method("register", func() {
+		Meta("swagger:summary", "Register a new webhook.")
 		Payload(func() {
 			def := model.NewConditions() // re-use default values
 			Attribute("tableId", String, "ID of table to create the import webhook on", func() {
@@ -121,6 +124,7 @@ var _ = Service("webhooks", func() {
 	})
 
 	Method("import", func() {
+		Meta("swagger:summary", "Import data.")
 		Payload(func() {
 			Field(1, "hash", String, "Authorization hash", func() {
 				Example("yljBSN5QmXRXFFs5Y7GEY")

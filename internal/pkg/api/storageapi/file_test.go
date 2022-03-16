@@ -1,4 +1,4 @@
-package storageapi
+package storageapi_test
 
 import (
 	"testing"

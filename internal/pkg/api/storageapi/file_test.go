@@ -1,6 +1,7 @@
-package storageapi_test
+package storageapi
 
 import (
+	"github.com/stretchr/testify/assert"
 	"testing"
 
 	"github.com/keboola/temp-webhooks-api/internal/pkg/env"
@@ -10,5 +11,7 @@ import (
 func TestX(t *testing.T) {
 	t.Parallel()
 	project := testproject.GetTestProject(t, env.Empty())
-	_ = project.StorageApi()
+	api := project.StorageApi()
+	var reponse = api.PostCreateFileResource("tmpfile")
+	assert.NotNil(t, reponse)
 }

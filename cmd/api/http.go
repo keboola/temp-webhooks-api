@@ -16,7 +16,6 @@ import (
 	goaHTTP "goa.design/goa/v3/http"
 	httpMiddleware "goa.design/goa/v3/http/middleware"
 	"goa.design/goa/v3/middleware"
-	dataDog "gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http"
 )
 
 // handleHTTPServer starts configures and starts a HTTP server on the given
@@ -53,7 +52,6 @@ func handleHTTPServer(ctx context.Context, wg *sync.WaitGroup, u *url.URL, endpo
 	var handler http.Handler = mux
 	handler = httpMiddleware.Log(middleware.NewLogger(logger))(handler)
 	handler = httpMiddleware.RequestID()(handler)
-	handler = dataDog.WrapHandler(handler, "templates-api", "")
 
 	// Start HTTP server using default configuration, change the code to
 	// configure the server as required by your service.

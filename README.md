@@ -7,7 +7,7 @@ docker-compose run --rm -u "$(id -u):$(id -g)" dev bash
 ```
 
 ### Generate API
-Generate API from `api/webhooks/design.go`:
+Generate API from `api/webhooks/design.go`. Run in `dev image`:
 ```
 make generate-api
 ```

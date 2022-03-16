@@ -97,12 +97,13 @@ var _ = Service("webhooks", func() {
 
 	Method("register", func() {
 		Payload(func() {
-			Field(1, "tableId", String, "ID of table to create the import webhook on")
-			Required("tableId")
+			Attribute("tableId", String, "ID of table to create the import webhook on")
+			Attribute("token", String, "Storage token to the project")
+			Required("tableId", "token")
 		})
 		Result(registration)
 		HTTP(func() {
-			POST("register/{tableId}")
+			POST("register")
 			Response(StatusOK)
 		})
 	})

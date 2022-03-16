@@ -2,6 +2,7 @@
 package webhooks
 
 import (
+	"github.com/keboola/temp-webhooks-api/internal/pkg/model"
 	_ "goa.design/goa/v3/codegen/generator"
 	. "goa.design/goa/v3/dsl"
 )
@@ -16,11 +17,7 @@ var _ = API("webhooks", func() {
 	})
 	Server("webhooks", func() {
 		Host("production", func() {
-			URI("https://webhooks.{stack}")
-			Variable("stack", String, "Base URL of the stack", func() {
-				Default("keboola.com")
-				Enum("keboola.com", "eu-central-1.keboola.com", "north-europe.azure.keboola.com")
-			})
+			URI("http://localhost:8888")
 		})
 	})
 })
@@ -46,7 +43,7 @@ var registration = ResultType("application/vnd.webhooks.registration", func() {
 
 	Attributes(func() {
 		Attribute("url", String, "Webhook url", func() {
-			Example("https://webhooks.keboola.com/v1/import/123")
+			Example("https://webhooks.keboola.com/import/yljBSN5QmXRXFFs5Y7GEY")
 		})
 		Required("url")
 	})
@@ -78,6 +75,39 @@ var _ = Service("webhooks", func() {
 		})
 	})
 
+	Method("register", func() {
+		Payload(func() {
+			def := model.NewConditions() // re-use default values
+			Attribute("tableId", String, "ID of table to create the import webhook on", func() {
+				Example("in.c-my-bucket.my-table")
+			})
+			Attribute("token", String, "Storage token to the project", func() {
+				Example("my-storage-api-token")
+			})
+			Attribute("conditions", func() {
+				Description("Import conditions. If at least one is met import to the table occurs.")
+				Attribute("count", Int, "Batch will be imported when the given number of records is reached.", func() {
+					Example(def.Count)
+					Default(def.Count)
+				})
+				Attribute("time", String, "Batch will be imported when time from the first request expires ", func() {
+					Example(def.Time)
+					Default(def.Time)
+				})
+				Attribute("size", String, "Batch will be imported when its size reaches a value.", func() {
+					Example(def.Size)
+					Default(def.Size)
+				})
+			})
+			Required("tableId", "token")
+		})
+		Result(registration)
+		HTTP(func() {
+			POST("register")
+			Response(StatusOK)
+		})
+	})
+
 	Method("import", func() {
 		NoSecurity()
 		Payload(func() {
@@ -89,26 +119,13 @@ var _ = Service("webhooks", func() {
 			Example("OK")
 		})
 		HTTP(func() {
-			GET("import/{hash}")
+			POST("import/{hash}")
 			Body(func() {
 				Attribute("body")
 			})
 			Response(StatusOK, func() {
 				ContentType("text/plain")
 			})
-		})
-	})
-
-	Method("register", func() {
-		Payload(func() {
-			Attribute("tableId", String, "ID of table to create the import webhook on")
-			Attribute("token", String, "Storage token to the project")
-			Required("tableId", "token")
-		})
-		Result(registration)
-		HTTP(func() {
-			POST("register")
-			Response(StatusOK)
 		})
 	})
 

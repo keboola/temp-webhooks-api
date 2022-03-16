@@ -43,7 +43,7 @@ func start(host, port string, debug bool, logger *log.Logger, envs *env.Map) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// Initialize the service.
-	svc := service.New(envs)
+	svc := service.New(envs, logger)
 
 	// Wrap the services in endpoints that can be invoked from other services
 	// potentially running in different processes.

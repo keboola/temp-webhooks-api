@@ -2,17 +2,27 @@ package service
 
 import (
 	"context"
+	"log"
 
 	"github.com/keboola/temp-webhooks-api/internal/pkg/env"
+	"github.com/keboola/temp-webhooks-api/internal/pkg/model"
 	"github.com/keboola/temp-webhooks-api/internal/pkg/webhooks/api/gen/webhooks"
 )
 
 type Service struct {
-	envs *env.Map
+	host    string
+	envs    *env.Map
+	logger  *log.Logger
+	storage *model.Storage
 }
 
-func New(envs *env.Map) webhooks.Service {
-	return &Service{envs: envs}
+func New(envs *env.Map, logger *log.Logger) webhooks.Service {
+	return &Service{
+		host:    "localhost:8888",
+		envs:    envs,
+		logger:  logger,
+		storage: model.NewStorage(),
+	}
 }
 
 func (s *Service) IndexRoot(_ context.Context) (res *webhooks.Index, err error) {
@@ -31,6 +41,16 @@ func (s *Service) Import(ctx context.Context, payload *webhooks.ImportPayload) (
 	return "OK", nil
 }
 
-func (s *Service) Register(ctx context.Context, payload *webhooks.RegisterPayload) (res *webhooks.Registration, err error) {
-	return nil, nil
+func (s *Service) Register(_ context.Context, payload *webhooks.RegisterPayload) (res *webhooks.Registration, err error) {
+	conditions := model.NewConditions()
+	if payload.Conditions != nil {
+		conditions.Count = payload.Conditions.Count
+		conditions.Time = payload.Conditions.Time
+		conditions.Size = payload.Conditions.Size
+	}
+
+	webhook := s.storage.RegisterWebhook(payload.Token, payload.TableID, conditions)
+	url := webhook.Url(s.host)
+	s.logger.Printf("REGISTERED tableId=\"%s\", url=\"%s\"", webhook.TableId, url)
+	return &webhooks.Registration{URL: url}, nil
 }

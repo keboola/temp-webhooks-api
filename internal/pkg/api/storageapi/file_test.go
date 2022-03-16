@@ -10,6 +10,5 @@ import (
 func TestX(t *testing.T) {
 	t.Parallel()
 	project := testproject.GetTestProject(t, env.Empty())
-	project.SetState("empty.json")
 	_ = project.StorageApi()
 }

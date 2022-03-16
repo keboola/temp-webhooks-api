@@ -1,6 +1,6 @@
 package model
 
-// File resource
+// File resource.
 type FileResource struct {
 	Id int `json:"id" validate:"required"`
 }

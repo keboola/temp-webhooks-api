@@ -3,6 +3,7 @@ package storageapi
 import (
 	"fmt"
 
+	"github.com/go-resty/resty/v2"
 	"github.com/keboola/temp-webhooks-api/internal/pkg/http/client"
 	"github.com/keboola/temp-webhooks-api/internal/pkg/model"
 )
@@ -31,6 +32,7 @@ func (a *Api) PostTableImportAsyncRequest(tableId string, fileId string) *client
 
 func (a *Api) CreateFileResource(name string) (model.FileResource, error) {
 	response := a.PostCreateFileResource(name).Send().Response
+	fmt.Println(string(response.Body()))
 	if response.HasResult() {
 		return *response.Result().(*model.FileResource), nil
 	}

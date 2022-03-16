@@ -2,7 +2,10 @@ package service
 
 import (
 	"context"
+	"fmt"
+	"io"
 	stdLog "log"
+	"time"
 
 	"github.com/keboola/temp-webhooks-api/internal/pkg/api/storageapi"
 	"github.com/keboola/temp-webhooks-api/internal/pkg/env"
@@ -11,7 +14,10 @@ import (
 	"github.com/keboola/temp-webhooks-api/internal/pkg/webhooks/api/gen/webhooks"
 )
 
+const WebhookCheckInterval = 5 * time.Second
+
 type Service struct {
+	ctx        context.Context
 	host       string
 	envs       *env.Map
 	logger     log.Logger
@@ -19,15 +25,40 @@ type Service struct {
 	storageApi *storageapi.Api
 }
 
-func New(envs *env.Map, stdLogger *stdLog.Logger) webhooks.Service {
+func New(ctx context.Context, envs *env.Map, stdLogger *stdLog.Logger) webhooks.Service {
 	logger := log.NewApiLogger(stdLogger, "", false)
 	storageApiHost := envs.MustGet("KBC_STORAGE_API_HOST")
-	return &Service{
+	s := &Service{
+		ctx:        ctx,
 		host:       "localhost:8888",
 		envs:       envs,
 		logger:     logger,
 		storage:    model.NewStorage(),
 		storageApi: storageapi.New(context.Background(), logger, storageApiHost, false),
+	}
+
+	s.StartCron()
+	return s
+}
+
+func (s *Service) StartCron() {
+	go func() {
+		ticker := time.NewTicker(WebhookCheckInterval)
+		for {
+			select {
+			case <-s.ctx.Done():
+				return
+			case <-ticker.C:
+				s.checkWebhooks()
+			}
+		}
+	}()
+}
+
+// checkWebhooks checks if webhook should be imported. See model.Conditions.
+func (s *Service) checkWebhooks() {
+	if err := s.storage.ImportData(); err != nil {
+		s.logger.Error(err)
 	}
 }
 
@@ -43,15 +74,21 @@ func (s *Service) HealthCheck(_ context.Context) (res string, err error) {
 	return "OK", nil
 }
 
-func (s *Service) Import(_ context.Context, payload *webhooks.ImportPayload) (res *webhooks.ImportResult, err error) {
+func (s *Service) Import(_ context.Context, payload *webhooks.ImportPayload, bodyStrean io.ReadCloser) (res *webhooks.ImportResult, err error) {
 	// Get webhook definition
 	webhook, err := s.storage.Get(payload.Hash)
 	if err != nil {
 		return nil, err
 	}
 
+	// Read body
+	body, err := io.ReadAll(bodyStrean)
+	if err != nil {
+		return nil, fmt.Errorf("cannot read request body: %w", err)
+	}
+
 	// Write CSV row
-	if err := webhook.WriteRow([]string{payload.Body}); err != nil {
+	if err := webhook.WriteRow([]string{string(body)}); err != nil {
 		return nil, err
 	}
 

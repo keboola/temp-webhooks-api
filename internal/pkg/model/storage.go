@@ -19,6 +19,15 @@ func NewStorage() *Storage {
 	}
 }
 
+// ImportData imports data from memory to the table, if model.Conditions are meet.
+func (s *Storage) ImportData() error {
+	for _, webhook := range s.webhooks {
+		// nolint: forbidigo
+		fmt.Printf("please resolve conditions: %#v\n", webhook.Conditions)
+	}
+	return nil
+}
+
 func (s *Storage) Get(hash string) (*Webhook, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()

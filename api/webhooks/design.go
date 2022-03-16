@@ -129,17 +129,12 @@ var _ = Service("webhooks", func() {
 			Field(1, "hash", String, "Authorization hash", func() {
 				Example("yljBSN5QmXRXFFs5Y7GEY")
 			})
-			Field(2, "body", String, "Raw request body", func() {
-				Example("Content to be imported.")
-			})
-			Required("hash", "body")
+			Required("hash")
 		})
 		Result(importResult)
 		HTTP(func() {
 			POST("import/{hash}")
-			Body(func() {
-				Attribute("body")
-			})
+			SkipRequestBodyEncodeDecode()
 			Response(StatusOK)
 		})
 	})

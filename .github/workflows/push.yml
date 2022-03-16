@@ -33,8 +33,6 @@ jobs:
           TEST_PARALLELISM: 16
 
   lint:
-    needs:
-      - set-version
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

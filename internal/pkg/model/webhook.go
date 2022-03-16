@@ -37,7 +37,7 @@ func (v *Webhook) WriteRow(record []string) error {
 	return v.File.Write(record)
 }
 
-func (v *Webhook) WaitingRows() int {
+func (v *Webhook) WaitingRecords() int {
 	return v.File.Rows()
 }
 

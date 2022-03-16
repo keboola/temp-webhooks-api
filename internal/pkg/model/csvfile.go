@@ -42,6 +42,15 @@ func (f *CsvFile) Rows() int {
 	return f.rows
 }
 
+func (f *CsvFile) Size() (int64, error) {
+	info, err := f.file.Stat()
+	if err != nil {
+		return 0, err
+	}
+
+	return info.Size(), nil
+}
+
 func (f *CsvFile) Write(record []string) error {
 	f.lock.Lock()
 	defer f.lock.Unlock()

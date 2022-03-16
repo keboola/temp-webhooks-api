@@ -56,7 +56,7 @@ func (s *Service) Import(_ context.Context, payload *webhooks.ImportPayload) (re
 	}
 
 	s.logger.Infof("RECEIVED webhook, tableId=\"%s\"", webhook.TableId)
-	return &webhooks.ImportResult{WaitingForImport: webhook.WaitingRows()}, nil
+	return &webhooks.ImportResult{RecordsInBatch: webhook.WaitingRecords()}, nil
 }
 
 func (s *Service) Register(_ context.Context, payload *webhooks.RegisterPayload) (res *webhooks.RegistrationResult, err error) {

@@ -42,10 +42,10 @@ var importResult = ResultType("application/vnd.webhooks.import.result", func() {
 	TypeName("ImportResult")
 
 	Attributes(func() {
-		Attribute("waitingForImport", Int, "Number of records that have not yet been imported into the table.", func() {
+		Attribute("recordsInBatch", Int, "Number of records that have not yet been imported into the table.", func() {
 			Example(123)
 		})
-		Required("waitingForImport")
+		Required("recordsInBatch")
 	})
 })
 

@@ -12,6 +12,11 @@ Generate API from `api/webhooks/design.go`. Run in `dev image`:
 make generate-api
 ```
 
+Copy dependencies to the `/vendor` directory:
+```
+make fix
+```
+
 ## Api Image
 
 Build image:

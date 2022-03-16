@@ -44,6 +44,19 @@ func New(ctx context.Context, envs *env.Map, stdLogger *stdLog.Logger) (webhooks
 		return nil, err
 	}
 
+	// Migrate DB
+	lockName := "__db_migration__"
+	lockTimeout := 30
+	if err := db.Exec(`SELECT GET_LOCK(?, ?)`, lockName, lockTimeout).Error; err != nil {
+		return nil, fmt.Errorf("db migration: cannot create lock: %w", err)
+	}
+	if err := db.AutoMigrate(&model.Webhook{}, &model.Conditions{}); err != nil {
+		return nil, fmt.Errorf("db migration: cannot migrate: %w", err)
+	}
+	if err := db.Exec(`SELECT RELEASE_LOCK(?)`, lockName).Error; err != nil {
+		return nil, fmt.Errorf("db migration: cannot release lock: %w", err)
+	}
+
 	s := &Service{
 		ctx:        ctx,
 		host:       serviceHost,
@@ -98,18 +111,18 @@ func (s *Service) Import(_ context.Context, payload *webhooks.ImportPayload, bod
 	}
 
 	// Read body
-	body, err := io.ReadAll(bodyStrean)
+	_, err = io.ReadAll(bodyStrean)
 	if err != nil {
 		return nil, fmt.Errorf("cannot read request body: %w", err)
 	}
 
-	// Write CSV row
-	if err := webhook.WriteRow([]string{string(body)}); err != nil {
-		return nil, err
-	}
+	//// Write CSV row
+	//if err := webhook.WriteRow([]string{string(body)}); err != nil {
+	//	return nil, err
+	//}
 
 	s.logger.Infof("RECEIVED webhook, tableId=\"%s\"", webhook.TableId)
-	return &webhooks.ImportResult{RecordsInBatch: webhook.WaitingRecords()}, nil
+	return &webhooks.ImportResult{RecordsInBatch: 0}, nil
 }
 
 func (s *Service) Register(_ context.Context, payload *webhooks.RegisterPayload) (res *webhooks.RegistrationResult, err error) {
@@ -121,9 +134,9 @@ func (s *Service) Register(_ context.Context, payload *webhooks.RegisterPayload)
 	// Create conditions
 	conditions := model.NewConditions()
 	if payload.Conditions != nil {
-		conditions.Count = payload.Conditions.Count
-		conditions.Time = payload.Conditions.Time
-		conditions.Size = payload.Conditions.Size
+		// conditions.SetCount(payload.Conditions.Count)
+		// conditions.SetTime(payload.Conditions.Time)
+		// conditions.SetSize(payload.Conditions.Size)
 	}
 
 	// Create webhook

@@ -2,7 +2,6 @@
 package webhooks
 
 import (
-	"github.com/keboola/temp-webhooks-api/internal/pkg/model"
 	_ "goa.design/goa/v3/codegen/generator"
 	. "goa.design/goa/v3/dsl"
 )
@@ -92,7 +91,6 @@ var _ = Service("webhooks", func() {
 	Method("register", func() {
 		Meta("swagger:summary", "Register a new webhook.")
 		Payload(func() {
-			def := model.NewConditions() // re-use default values
 			Attribute("tableId", String, "ID of table to create the import webhook on", func() {
 				Example("in.c-my-bucket.my-table")
 			})
@@ -102,16 +100,13 @@ var _ = Service("webhooks", func() {
 			Attribute("conditions", func() {
 				Description("Import conditions. If at least one is met import to the table occurs.")
 				Attribute("count", Int, "Batch will be imported when the given number of records is reached.", func() {
-					Example(def.Count)
-					Default(def.Count)
+					Example(1000)
 				})
 				Attribute("time", String, "Batch will be imported when time from the first request expires ", func() {
-					Example(def.Time)
-					Default(def.Time)
+					Example("30s")
 				})
 				Attribute("size", String, "Batch will be imported when its size reaches a value.", func() {
-					Example(def.Size)
-					Default(def.Size)
+					Example("10MB")
 				})
 			})
 			Required("tableId", "token")

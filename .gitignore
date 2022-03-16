@@ -1,0 +1,34 @@
+!.gitkeep
+
+# Mac OS X files
+.DS_Store
+
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+!build/package/windows/signtool.exe
+
+# Test binary, build with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# IDE
+/.idea
+
+# Dependency directory
+vendor/*
+
+# Build dir
+target
+
+# Environment
+/.env
+
+# Integration tests output
+/src/tests/**/.out/*

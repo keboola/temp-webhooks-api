@@ -1,0 +1,135 @@
+run:
+  concurrency: 8
+  tests: true # check test files
+  skip-files: []
+  skip-dirs: []
+  skip-dirs-use-default: true
+  modules-download-mode: readonly
+
+output:
+  sort-results: true
+
+linters-settings:
+  # Errors from the project can be returned without wrapping
+  wrapcheck:
+    ignorePackageGlobs:
+      - github.com/keboola/keboola-as-code/*
+  # Gci - improved version of goimports
+  gci:
+    local-prefixes: github.com/keboola/keboola-as-code
+  gocyclo:
+    # minimal code complexity to report, 30 by default (but we recommend 10-20)
+    min-complexity: 10
+
+  # Forbidden constructions
+  forbidigo:
+    forbid:
+      # No debug statements
+      - ^(fmt\.Print.*|print|println)$
+      # No "os" filesystem ops, use "internal/pkg/filesystem" package instead
+      - ^(os\.(NewFile|Create.*|Open.*|Ch.*|Link|Symlink|Mkdir.*|ReadFile|Readlink|Remove.*|Rename|Truncate|Lstat|Stat|Getwd))$
+      - ^testhelper.(GetFileContent|Glob)$
+      # No "filepath" package, use "internal/pkg/filesystem" package instead
+      - ^filepath\..*$
+      # "httpmock" singleton is forbidden, it doesn't work in parallel tests, use client.Transport = httpmock.NewMockTransport() instead
+      - ^httpmock\.(Activate|ActivateNonDefault|ActivateNonDefault|DeactivateAndReset|RegisterResponder|GetCallCountInfo)$
+      # Os ENVs singleton is forbidden, use env.Map instead
+      - ^os\.(Setenv|Getenv|Unsetenv|Lookupenv|Clearenv|PathSeparator)$
+      # Instead of SetBody, use client.Request.SetJsonBody/SetFormBody
+      - ^.*\.SetBody$
+      # Instead of aferocopy.Copy use aferofs.CopyFs2Fs
+      - ^aferocopy\.Copy$
+      # Instead of "zap" package use "internal/log" package
+      - ^zap\.
+
+# https://golangci-lint.run/usage/linters
+linters:
+  enable:
+    - asciicheck
+    - bodyclose
+    - depguard
+    - dogsled
+    - dupl
+    - durationcheck
+    - errcheck
+    - errname
+    - errorlint
+    - exportloopref
+    - forbidigo
+    - gci
+    - gochecknoglobals
+    - gochecknoinits
+    - goconst
+    - gocritic
+    - godot
+    - godox
+    - gofumpt
+    - goheader
+    - gomodguard
+    - goprintffuncname
+    - gosec
+    - gosimple
+    - govet
+    - ifshort
+    - importas
+    - ineffassign
+    - makezero
+    - misspell
+    - nakedret
+    - nilerr
+    - noctx
+    - predeclared
+    - promlinter
+    - rowserrcheck
+    - sqlclosecheck
+    - staticcheck
+    - structcheck
+    - tagliatelle
+    - thelper
+    - tparallel
+    - paralleltest
+    - unconvert
+    - unparam
+    - unused
+    - varcheck
+    - wastedassign
+    - whitespace
+  disable:
+    - goimports # replaced with gci
+    - gofmt # replaced with gofumpt
+    - nolintlint # strange behavior
+    - gomoddirectives # allow replace directive in go.mod
+    # TODO
+    - funlen
+    - gocyclo
+    - gocognit
+    - cyclop
+    - nestif
+    - lll
+    - gomnd
+    - deadcode
+
+issues:
+  # List of regexps of issue texts to exclude
+  exclude:
+    - 'G306: Expect WriteFile permissions to be 0600 or less'
+    - 'string `keboola.*` has .* occurrences, make it a constant'
+
+  # Excluding configuration per-path, per-linter, per-text and per-source
+  exclude-rules:
+    # Exclude some linters from running on tests files.
+    - path: _test\.go
+      linters:
+        - gocyclo
+        - goconst
+        - gosec
+        - gochecknoglobals
+        - errcheck
+        - errorlint
+        - dupl
+        - dogsled
+        - bodyclose
+    # False positive: https://github.com/kunwardeep/paralleltest/issues/8.
+    - linters:
+        - paralleltest
+      text: "Range statement for test TestCliE2E does not use range value in test Run"

@@ -25,7 +25,7 @@ var _ = API("webhooks", func() {
 	})
 })
 
-var index = ResultType("application/vnd.templates.index", func() {
+var index = ResultType("application/vnd.webhooks.index", func() {
 	Description("Index of the service")
 	TypeName("Index")
 
@@ -37,6 +37,18 @@ var index = ResultType("application/vnd.templates.index", func() {
 			Example("https://webhooks.keboola.com/documentation")
 		})
 		Required("api", "documentation")
+	})
+})
+
+var registration = ResultType("application/vnd.webhooks.registration", func() {
+	Description("Registration response")
+	TypeName("Registration")
+
+	Attributes(func() {
+		Attribute("url", String, "Webhook url", func() {
+			Example("https://webhooks.keboola.com/v1/import/123")
+		})
+		Required("url")
 	})
 })
 
@@ -63,6 +75,35 @@ var _ = Service("webhooks", func() {
 			Response(StatusOK, func() {
 				ContentType("text/plain")
 			})
+		})
+	})
+
+	Method("import", func() {
+		NoSecurity()
+		Payload(func() {
+			Field(1, "hash", String, "Authorization hash")
+			Required("hash")
+		})
+		Result(String, func() {
+			Example("OK")
+		})
+		HTTP(func() {
+			GET("import/{hash}")
+			Response(StatusOK, func() {
+				ContentType("text/plain")
+			})
+		})
+	})
+
+	Method("register", func() {
+		Payload(func() {
+			Field(1, "tableId", String, "ID of table to create the import webhook on")
+			Required("tableId")
+		})
+		Result(registration)
+		HTTP(func() {
+			POST("register/{tableId}")
+			Response(StatusOK)
 		})
 	})
 

@@ -26,3 +26,11 @@ func (s *Service) IndexRoot(_ context.Context) (res *webhooks.Index, err error) 
 func (s *Service) HealthCheck(_ context.Context) (res string, err error) {
 	return "OK", nil
 }
+
+func (s *Service) Import(ctx context.Context, payload *webhooks.ImportPayload) (res string, err error) {
+	return "OK", nil
+}
+
+func (s *Service) Register(ctx context.Context, payload *webhooks.RegisterPayload) (res *webhooks.Registration, err error) {
+	return nil, nil
+}

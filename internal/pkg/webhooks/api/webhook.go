@@ -5,9 +5,9 @@ type Webhook struct {
 	Table      string
 	Hash       string
 	Conditions struct {
-		Count    int
-		Time     string
-		SizeInMB string
+		Count int
+		Time  string
+		Size  string
 	}
 }
 

@@ -13,7 +13,13 @@ func TestPostCreateFileResource(t *testing.T) {
 	project := testproject.GetTestProject(t, env.Empty())
 	api := project.StorageApi()
 	response, err := api.CreateFileResource("tmpfile")
+
 	assert.NoError(t, err)
 	assert.NotNil(t, response)
-	assert.Fail(t, "abc")
+	assert.Equal(t, "aws", response.Provider)
+	assert.Equal(t, "tmpfile", response.Name)
+	assert.NotNil(t, response.Url)
+	assert.NotNil(t, response.UploadParams)
+	assert.NotNil(t, response.UploadParams.Key)
+	assert.NotNil(t, response.UploadParams.Credentials.AccessKeyId)
 }

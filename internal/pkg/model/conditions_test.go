@@ -54,5 +54,5 @@ func TestInvalidTime(t *testing.T) {
 	cond := NewConditions()
 	testedTime := "fsf"
 	err := cond.SetTime(&testedTime)
-	assert.Contains(t, err.Error(), "time: invalid duration \"fsf\"")
+	assert.Contains(t, err.Error(), "invalid time value. use format Xs|m")
 }

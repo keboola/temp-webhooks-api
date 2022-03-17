@@ -12,7 +12,7 @@ properties:
           - name: SERVICE_HOST
             value: localhost:8888
           - name: SERVICE_MYSQL_DSN
-            value: user:pass@tcp(mysql:3306)/db
+            value: user:pass@tcp(localhost:3306)/db
         resources:
           requests:
             cpu: 1

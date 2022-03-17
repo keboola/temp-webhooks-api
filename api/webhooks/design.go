@@ -42,11 +42,11 @@ var conditions = Type("conditions", func() {
 	Attribute("count", UInt, "Batch will be imported when the given number of records is reached.", func() {
 		Example(1000)
 	})
-	Attribute("time", String, "Batch will be imported when time from the first request expires ", func() {
-		Example("30s")
-	})
 	Attribute("size", String, "Batch will be imported when its size reaches a value.", func() {
 		Example("10MB")
+	})
+	Attribute("time", String, "Batch will be imported when time from the first request expires ", func() {
+		Example("30s")
 	})
 })
 

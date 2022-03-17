@@ -6,20 +6,19 @@ import (
 
 	"github.com/c2h5oh/datasize"
 	"github.com/keboola/temp-webhooks-api/internal/pkg/webhooks/api/gen/webhooks"
-	"github.com/spf13/cast"
 )
 
 const (
-	MaxCount     uint          = 10000             // 10k rows
-	MaxTime      time.Duration = 30 * time.Minute  // 30 min
-	MaxSize      uint64        = 100 * 1024 * 1024 // 100MB
-	DefaultCount uint          = 1000
+	MaxCount     uint              = 10000             // 10k rows
+	MaxTime      time.Duration     = 30 * time.Minute  // 30 min
+	MaxSize      datasize.ByteSize = 100 * 1024 * 1024 // 100MB
+	DefaultCount uint              = 1000
 )
 
 type Conditions struct {
 	Count *uint
 	Time  *time.Duration
-	Size  *uint64
+	Size  *datasize.ByteSize
 }
 
 func NewConditions() Conditions {
@@ -32,24 +31,9 @@ func NewConditions() Conditions {
 
 func (c *Conditions) SetCount(count *uint) error {
 	c.Count = count
-	return nil
-}
-
-func (c *Conditions) SetTime(str *string) error {
-	if str == nil {
-		c.Time = nil
-		return nil
+	if count != nil && *count > MaxCount {
+		return errors.New("count is too high")
 	}
-
-	duration, err := time.ParseDuration(*str)
-	if err != nil {
-		return err
-	}
-
-	if duration.Seconds() > MaxTime.Seconds() {
-		return errors.New("time is too high")
-	}
-	c.Time = &duration
 	return nil
 }
 
@@ -65,14 +49,30 @@ func (c *Conditions) SetSize(str *string) error {
 		return errors.New("invalid size value. use format X MB|KB")
 	}
 
-	bytes := v.Bytes()
-	if bytes > MaxSize {
+	if v > MaxSize {
 		return errors.New("au, size is too big")
 	}
 
-	c.Size = &bytes
-
+	c.Size = &v
 	return err
+}
+
+func (c *Conditions) SetTime(str *string) error {
+	if str == nil {
+		c.Time = nil
+		return nil
+	}
+
+	duration, err := time.ParseDuration(*str)
+	if err != nil {
+		return err
+	}
+
+	if duration > MaxTime {
+		return errors.New("time is too high")
+	}
+	c.Time = &duration
+	return nil
 }
 
 func (c *Conditions) ReachCondition(count uint, time time.Duration, size uint64) bool {
@@ -82,21 +82,21 @@ func (c *Conditions) ReachCondition(count uint, time time.Duration, size uint64)
 	if c.Count != nil && count > *c.Count {
 		return true
 	}
-	if c.Time != nil && time > *c.Time {
+	if c.Size != nil && datasize.ByteSize(size) > *c.Size {
 		return true
 	}
-	if c.Size != nil && size > *c.Size {
+	if c.Time != nil && time > *c.Time {
 		return true
 	}
 	return false
 }
 
 func (c *Conditions) Payload() *webhooks.Conditions {
-	timeStr := cast.ToString(c.Time)
-	sizeStr := cast.ToString(c.Size)
+	timeStr := c.Time.String()
+	sizeStr := c.Size.String()
 	return &webhooks.Conditions{
 		Count: c.Count,
-		Time:  &timeStr,
 		Size:  &sizeStr,
+		Time:  &timeStr,
 	}
 }

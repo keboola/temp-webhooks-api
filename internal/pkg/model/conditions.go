@@ -41,7 +41,7 @@ func (c *Conditions) SetTime(str *string) error {
 	if err != nil {
 		return err
 	}
-	*c.Time = duration
+	c.Time = &duration
 	return nil
 }
 
@@ -52,7 +52,7 @@ func (c *Conditions) SetSize(str *string) error {
 	}
 
 	parsed, err := strconv.ParseUint(*str, 0, 64)
-	*c.Size = parsed
+	c.Size = &parsed
 	return err
 }
 

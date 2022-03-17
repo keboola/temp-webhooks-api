@@ -37,6 +37,19 @@ var index = ResultType("application/vnd.webhooks.index", func() {
 	})
 })
 
+var conditions = Type("conditions", func() {
+	Description("Import conditions. If at least one is met import to the table occurs.")
+	Attribute("count", UInt, "Batch will be imported when the given number of records is reached.", func() {
+		Example(1000)
+	})
+	Attribute("time", String, "Batch will be imported when time from the first request expires ", func() {
+		Example("30s")
+	})
+	Attribute("size", String, "Batch will be imported when its size reaches a value.", func() {
+		Example("10MB")
+	})
+})
+
 var importResult = ResultType("application/vnd.webhooks.import.result", func() {
 	Description("Import result")
 	TypeName("ImportResult")
@@ -59,6 +72,13 @@ var registerResult = ResultType("application/vnd.webhooks.register.result", func
 		})
 		Required("url")
 	})
+})
+
+var updateResult = ResultType("application/vnd.webhooks.update.result", func() {
+	Description("Update result")
+	TypeName("UpdateResult")
+	Attribute("conditions", conditions)
+	Required("conditions")
 })
 
 var _ = Service("webhooks", func() {
@@ -98,18 +118,7 @@ var _ = Service("webhooks", func() {
 			Attribute("token", String, "Storage token to the project", func() {
 				Example("my-storage-api-token")
 			})
-			Attribute("conditions", func() {
-				Description("Import conditions. If at least one is met import to the table occurs.")
-				Attribute("count", UInt, "Batch will be imported when the given number of records is reached.", func() {
-					Example(1000)
-				})
-				Attribute("time", String, "Batch will be imported when time from the first request expires ", func() {
-					Example("30s")
-				})
-				Attribute("size", String, "Batch will be imported when its size reaches a value.", func() {
-					Example("10MB")
-				})
-			})
+			Attribute("conditions", conditions)
 			Required("tableId", "token")
 		})
 		Result(registerResult)
@@ -121,9 +130,25 @@ var _ = Service("webhooks", func() {
 			Required("message")
 		})
 		HTTP(func() {
-			POST("register")
-			Response(StatusOK)
+			POST("webhook")
+			Response(StatusCreated)
 			Response("UnauthorizedError", StatusUnauthorized)
+		})
+	})
+
+	Method("update", func() {
+		Meta("swagger:summary", "Update conditions of the webhook.")
+		Payload(func() {
+			Field(1, "hash", String, "Authorization hash", func() {
+				Example("yljBSN5QmXRXFFs5Y7GEY")
+			})
+			Attribute("conditions", conditions)
+			Required("hash", "conditions")
+		})
+		Result(updateResult)
+		HTTP(func() {
+			PUT("webhook/{hash}")
+			Response(StatusOK)
 		})
 	})
 
@@ -144,7 +169,7 @@ var _ = Service("webhooks", func() {
 			Required("message")
 		})
 		HTTP(func() {
-			POST("import/{hash}")
+			POST("webhook/{hash}/import")
 			SkipRequestBodyEncodeDecode()
 			Response(StatusOK)
 			Response("WebhookNotFoundError", StatusNotFound)

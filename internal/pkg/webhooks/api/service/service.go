@@ -103,6 +103,45 @@ func (s *Service) HealthCheck(_ context.Context) (res string, err error) {
 	return "OK", nil
 }
 
+func (s *Service) Register(_ context.Context, payload *webhooks.RegisterPayload) (res *webhooks.RegistrationResult, err error) {
+	// Validate token
+	token, err := s.storageApi.GetToken(payload.Token)
+	if err != nil {
+		return nil, &webhooks.UnauthorizedError{Message: err.Error()}
+	}
+
+	// Create conditions
+	conditions, err := conditionsFromPayload(payload.Conditions)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create webhook
+	webhook, err := s.storage.RegisterWebhook(token, payload.TableID, conditions)
+	if err != nil {
+		return nil, err
+	}
+
+	// Return URL
+	url := webhook.Url(s.host)
+	s.logger.Infof("REGISTERED webhook, tableId=\"%s\"", webhook.TableId)
+	return &webhooks.RegistrationResult{URL: url}, nil
+}
+
+func (s *Service) Update(_ context.Context, payload *webhooks.UpdatePayload) (res *webhooks.UpdateResult, err error) {
+	// Create conditions
+	conditions, err := conditionsFromPayload(payload.Conditions)
+	if err != nil {
+		return nil, err
+	}
+
+	webhook, err := s.storage.UpdateWebhook(payload.Hash, conditions)
+	if err != nil {
+		return nil, err
+	}
+	return &webhooks.UpdateResult{Conditions: webhook.Conditions.Payload()}, nil
+}
+
 func (s *Service) Import(ctx context.Context, payload *webhooks.ImportPayload, bodyStream io.ReadCloser) (res *webhooks.ImportResult, err error) {
 	// Read body
 	body, err := io.ReadAll(bodyStream)
@@ -121,37 +160,21 @@ func (s *Service) Import(ctx context.Context, payload *webhooks.ImportPayload, b
 	return &webhooks.ImportResult{RecordsInBatch: count}, nil
 }
 
-func (s *Service) Register(_ context.Context, payload *webhooks.RegisterPayload) (res *webhooks.RegistrationResult, err error) {
-	// Validate token
-	token, err := s.storageApi.GetToken(payload.Token)
-	if err != nil {
-		return nil, &webhooks.UnauthorizedError{Message: err.Error()}
-	}
-
+func conditionsFromPayload(payload *webhooks.Conditions) (model.Conditions, error) {
 	// Create conditions
 	conditions := model.NewConditions()
-	if payload.Conditions != nil {
-		if err := conditions.SetCount(payload.Conditions.Count); err != nil {
-			return nil, err
+	if payload != nil {
+		if err := conditions.SetCount(payload.Count); err != nil {
+			return conditions, err
 		}
-		if err := conditions.SetTime(payload.Conditions.Time); err != nil {
-			return nil, err
+		if err := conditions.SetTime(payload.Time); err != nil {
+			return conditions, err
 		}
-		if err := conditions.SetSize(payload.Conditions.Size); err != nil {
-			return nil, err
+		if err := conditions.SetSize(payload.Size); err != nil {
+			return conditions, err
 		}
 	}
-
-	// Create webhook
-	webhook, err := s.storage.Register(token, payload.TableID, conditions)
-	if err != nil {
-		return nil, err
-	}
-
-	// Return URL
-	url := webhook.Url(s.host)
-	s.logger.Infof("REGISTERED webhook, tableId=\"%s\"", webhook.TableId)
-	return &webhooks.RegistrationResult{URL: url}, nil
+	return conditions, nil
 }
 
 func connectToDb(mysqlDsn string, logger *stdLog.Logger) (db *gorm.DB, err error) {

@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/c2h5oh/datasize"
+	"github.com/keboola/temp-webhooks-api/internal/pkg/webhooks/api/gen/webhooks"
+	"github.com/spf13/cast"
 )
 
 const (
@@ -87,4 +89,14 @@ func (c *Conditions) ReachCondition(count uint, time time.Duration, size uint64)
 		return true
 	}
 	return false
+}
+
+func (c *Conditions) Payload() *webhooks.Conditions {
+	timeStr := cast.ToString(c.Time)
+	sizeStr := cast.ToString(c.Size)
+	return &webhooks.Conditions{
+		Count: c.Count,
+		Time:  &timeStr,
+		Size:  &sizeStr,
+	}
 }

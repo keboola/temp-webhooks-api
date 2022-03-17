@@ -34,7 +34,7 @@ func (s *Storage) Get(hashStr string) (*model.Webhook, error) {
 	return getWebhook(hashStr, s.db)
 }
 
-func (s *Storage) Register(token model.Token, tableId string, conditions model.Conditions) (*model.Webhook, error) {
+func (s *Storage) RegisterWebhook(token model.Token, tableId string, conditions model.Conditions) (*model.Webhook, error) {
 	hash := model.WebhookHash(gonanoid.Must())
 	webhook := &model.Webhook{
 		Hash:       hash,
@@ -46,13 +46,33 @@ func (s *Storage) Register(token model.Token, tableId string, conditions model.C
 	return webhook, s.db.Create(webhook).Error
 }
 
+func (s *Storage) UpdateWebhook(webhookHash string, conditions model.Conditions) (webhook *model.Webhook, err error) {
+	err = s.db.Transaction(func(tx *gorm.DB) error {
+		// Get webhook, select for update
+		webhook, err = getWebhook(webhookHash, tx.Clauses(clause.Locking{Strength: "UPDATE"}))
+		if err != nil {
+			return err
+		}
+
+		// Update
+		if err := tx.Model(&model.Webhook{}).Where("id = ?", webhook.Id).Updates(&model.Webhook{Conditions: conditions}).Error; err != nil {
+			return err
+		}
+
+		// Load new values
+		webhook, err = getWebhook(webhookHash, tx.Clauses(clause.Locking{Strength: "UPDATE"}))
+		return err
+	})
+	return webhook, err
+}
+
 func (s *Storage) WriteRow(webhookHash string, headers, body string) (webhook *model.Webhook, count uint64, err error) {
 	var countInt int64
 	err = s.db.Transaction(func(tx *gorm.DB) error {
 		// Get webhook, select for update
 		webhook, err = getWebhook(webhookHash, tx.Clauses(clause.Locking{Strength: "UPDATE"}))
 		if err != nil {
-			return &webhooks.WebhookNotFoundError{Message: err.Error()}
+			return err
 		}
 
 		// Create row
@@ -70,7 +90,9 @@ func (s *Storage) WriteRow(webhookHash string, headers, body string) (webhook *m
 
 		// Update size
 		size := uint64(len(headers) + len(body))
-		tx.Model(&model.Webhook{}).Where("id = ?", webhook.Id).Update("size", webhook.Size+size)
+		if err := tx.Model(&model.Webhook{}).Where("id = ?", webhook.Id).Update("size", webhook.Size+size).Error; err != nil {
+			return err
+		}
 
 		// Get current batch size
 		if err := tx.Model(&model.Row{}).Where("webhook = ?", webhook.Id).Count(&countInt).Error; err != nil {
@@ -103,7 +125,9 @@ func getWebhook(hashStr string, db *gorm.DB) (*model.Webhook, error) {
 
 	err := db.First(&webhook, "hash = ?", hash).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, fmt.Errorf(`webhook "%s" not found`, hash)
+		if err != nil {
+			return nil, &webhooks.WebhookNotFoundError{Message: err.Error()}
+		}
 	}
 	return &webhook, err
 }

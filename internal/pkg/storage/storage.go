@@ -9,6 +9,7 @@ import (
 	"github.com/keboola/temp-webhooks-api/internal/pkg/model"
 	gonanoid "github.com/matoous/go-nanoid/v2"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type Storage struct {
@@ -29,37 +30,49 @@ func (s *Storage) ImportData() error {
 }
 
 func (s *Storage) Get(hashStr string) (*model.Webhook, error) {
-	hash := model.WebhookHash(hashStr)
-	webhook := model.Webhook{}
-	err := s.db.First(&webhook, "hash = ?", hash).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, fmt.Errorf(`webhook "%s" not found`, hash)
-	}
-	return &webhook, err
+	return getWebhook(hashStr, s.db)
 }
 
-func (s *Storage) Register(token, tableId string, conditions model.Conditions) (*model.Webhook, error) {
+func (s *Storage) Register(token model.Token, tableId string, conditions model.Conditions) (*model.Webhook, error) {
 	hash := model.WebhookHash(gonanoid.Must())
 	webhook := &model.Webhook{
 		Hash:       hash,
-		Token:      token,
+		ProjectId:  uint32(token.ProjectId()),
+		Token:      token.Token,
 		TableId:    tableId,
 		Conditions: conditions,
 	}
 	return webhook, s.db.Create(webhook).Error
 }
 
-func (s *Storage) WriteRow(webhook *model.Webhook, headers, body string) error {
-	row := &model.Row{
-		Webhook: webhook.Id,
-		Time:    time.Now(),
-		Headers: headers,
-		Body:    body,
-	}
-	if err := s.db.Create(row).Error; err != nil {
-		return fmt.Errorf("cannot write data to db: %w", err)
-	}
-	return nil
+func (s *Storage) WriteRow(webhookHash string, headers, body string) (webhook *model.Webhook, err error) {
+	err = s.db.Transaction(func(tx *gorm.DB) error {
+		// Get webhook, select for update
+		webhook, err = getWebhook(webhookHash, tx.Clauses(clause.Locking{Strength: "UPDATE"}))
+		if err != nil {
+			return err
+		}
+
+		// Create row
+		row := &model.Row{
+			Webhook: webhook.Id,
+			Time:    time.Now(),
+			Headers: headers,
+			Body:    body,
+		}
+
+		// Insert row
+		if err := tx.Create(row).Error; err != nil {
+			return fmt.Errorf("cannot write data to db: %w", err)
+		}
+
+		// Update size
+		size := uint64(len(headers) + len(body))
+		tx.Model(&model.Webhook{}).Where("id = ?", webhook.Id).Update("size", webhook.Size+size)
+
+		return nil
+	})
+	return webhook, err
 }
 
 func (s *Storage) MigrateDb() error {
@@ -75,4 +88,15 @@ func (s *Storage) MigrateDb() error {
 		return fmt.Errorf("db migration: cannot release lock: %w", err)
 	}
 	return nil
+}
+
+func getWebhook(hashStr string, db *gorm.DB) (*model.Webhook, error) {
+	hash := model.WebhookHash(hashStr)
+	webhook := model.Webhook{}
+
+	err := db.First(&webhook, "hash = ?", hash).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, fmt.Errorf(`webhook "%s" not found`, hash)
+	}
+	return &webhook, err
 }

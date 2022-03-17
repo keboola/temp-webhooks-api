@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"io"
 	stdLog "log"
+	"net/http"
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/keboola/temp-webhooks-api/internal/pkg/api/storageapi"
 	"github.com/keboola/temp-webhooks-api/internal/pkg/env"
+	"github.com/keboola/temp-webhooks-api/internal/pkg/json"
 	"github.com/keboola/temp-webhooks-api/internal/pkg/log"
 	"github.com/keboola/temp-webhooks-api/internal/pkg/model"
 	"github.com/keboola/temp-webhooks-api/internal/pkg/storage"
@@ -20,7 +21,12 @@ import (
 	gormLogger "gorm.io/gorm/logger"
 )
 
-const WebhookCheckInterval = 5 * time.Second
+const (
+	WebhookCheckInterval = 5 * time.Second
+	HeadersCtxKey        = ctxKey("headers")
+)
+
+type ctxKey string
 
 type Service struct {
 	ctx        context.Context
@@ -98,12 +104,6 @@ func (s *Service) HealthCheck(_ context.Context) (res string, err error) {
 }
 
 func (s *Service) Import(ctx context.Context, payload *webhooks.ImportPayload, bodyStream io.ReadCloser) (res *webhooks.ImportResult, err error) {
-	// Get webhook definition
-	webhook, err := s.storage.Get(payload.Hash)
-	if err != nil {
-		return nil, err
-	}
-
 	// Read body
 	body, err := io.ReadAll(bodyStream)
 	if err != nil {
@@ -111,9 +111,9 @@ func (s *Service) Import(ctx context.Context, payload *webhooks.ImportPayload, b
 	}
 
 	// Write CSV row
-	spew.Dump(ctx)
-	headers := "todo"
-	if err := s.storage.WriteRow(webhook, headers, string(body)); err != nil {
+	headers := json.MustEncodeString(ctx.Value(HeadersCtxKey).(http.Header), true)
+	webhook, err := s.storage.WriteRow(payload.Hash, headers, string(body))
+	if err != nil {
 		return nil, err
 	}
 
@@ -123,7 +123,8 @@ func (s *Service) Import(ctx context.Context, payload *webhooks.ImportPayload, b
 
 func (s *Service) Register(_ context.Context, payload *webhooks.RegisterPayload) (res *webhooks.RegistrationResult, err error) {
 	// Validate token
-	if _, err := s.storageApi.GetToken(payload.Token); err != nil {
+	token, err := s.storageApi.GetToken(payload.Token)
+	if err != nil {
 		return nil, err
 	}
 
@@ -136,7 +137,7 @@ func (s *Service) Register(_ context.Context, payload *webhooks.RegisterPayload)
 	}
 
 	// Create webhook
-	webhook, err := s.storage.Register(payload.Token, payload.TableID, conditions)
+	webhook, err := s.storage.Register(token, payload.TableID, conditions)
 	if err != nil {
 		return nil, err
 	}

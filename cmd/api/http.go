@@ -13,6 +13,7 @@ import (
 	"github.com/keboola/temp-webhooks-api/api/webhooks/gen"
 	webhooksSvr "github.com/keboola/temp-webhooks-api/internal/pkg/webhooks/api/gen/http/webhooks/server"
 	"github.com/keboola/temp-webhooks-api/internal/pkg/webhooks/api/gen/webhooks"
+	"github.com/keboola/temp-webhooks-api/internal/pkg/webhooks/api/service"
 	swaggerui "github.com/keboola/temp-webhooks-api/third_party"
 	goaHTTP "goa.design/goa/v3/http"
 	httpMiddleware "goa.design/goa/v3/http/middleware"
@@ -54,6 +55,11 @@ func handleHTTPServer(ctx context.Context, wg *sync.WaitGroup, u *url.URL, endpo
 	var handler http.Handler = mux
 	handler = httpMiddleware.Log(middleware.NewLogger(logger))(handler)
 	handler = httpMiddleware.RequestID()(handler)
+	handler = func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), service.HeadersCtxKey, r.Header)))
+		})
+	}(handler)
 
 	// Start HTTP server using default configuration, change the code to
 	// configure the server as required by your service.

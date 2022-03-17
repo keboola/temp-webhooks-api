@@ -120,6 +120,7 @@ func (s *Storage) WriteRow(webhookHash string, headers, body string) (webhook *m
 
 func (s *Storage) Fetch(webhookHash string, target io.Writer) (webhook *model.Webhook, err error) {
 	csvWriter := csv.NewWriter(target)
+	defer csvWriter.Flush()
 
 	// Write header
 	if err := csvWriter.Write([]string{"timestamp", "headers", "body"}); err != nil {
@@ -134,7 +135,7 @@ func (s *Storage) Fetch(webhookHash string, target io.Writer) (webhook *model.We
 		}
 
 		// Select rows
-		rows, err := s.db.Table("data").Where("webhook = ?", webhook.Id).Rows()
+		rows, err := tx.Table("data").Where("webhook = ?", webhook.Id).Rows()
 		if err != nil {
 			return err
 		}
@@ -143,7 +144,7 @@ func (s *Storage) Fetch(webhookHash string, target io.Writer) (webhook *model.We
 		// Load rows
 		for rows.Next() {
 			row := &model.Row{}
-			if err := rows.Scan(row); err != nil {
+			if err := tx.ScanRows(rows, row); err != nil {
 				return err
 			}
 
@@ -158,7 +159,7 @@ func (s *Storage) Fetch(webhookHash string, target io.Writer) (webhook *model.We
 		}
 
 		// Clear rows
-		if err := s.db.Table("data").Where("webhook = ?", webhook.Id).Delete(&model.Row{}).Error; err != nil {
+		if err := tx.Table("data").Where("webhook = ?", webhook.Id).Delete(&model.Row{}).Error; err != nil {
 			return err
 		}
 

@@ -49,8 +49,8 @@ func (a *Api) CreateBucketAsyncRequest(name string, stage string, displayName st
 	return request
 }
 
-func (a *Api) CreateTableAsync(tableId string, tableName string, fileId string) (model.Job, error) {
-	response := a.CreateTableAsyncRequest(tableId, tableName, fileId).Send().Response
+func (a *Api) CreateTableAsync(bucketId string, tableName string, fileId string) (model.Job, error) {
+	response := a.CreateTableAsyncRequest(bucketId, tableName, fileId).Send().Response
 
 	if response.HasResult() {
 		return *response.Result().(*model.Job), nil

@@ -183,6 +183,31 @@ func (s *Service) Import(ctx context.Context, payload *webhooks.ImportPayload, b
 }
 
 func (s *Service) importToKbc(webhookHash string) error {
+	// Get webhook
+	webhook, err := s.storage.Get(webhookHash)
+	if err != nil {
+		return err
+	}
+
+	// Parse tableID
+	parts := strings.Split(webhook.TableId, ".")
+	if len(parts) != 3 {
+		return fmt.Errorf(`invalid table ID: %s`, webhook.TableId)
+	}
+	bucketId := strings.Join(parts[0:2], ".")
+	tableName := parts[2]
+
+	// Set token
+	apiWithToken := s.storageApi.WithToken(model.Token{Token: webhook.Token})
+
+	// Create bucket if not exists
+	if !apiWithToken.BucketExists(bucketId) {
+		if _, err := apiWithToken.CreateBucket(parts[1], parts[0], parts[1]); err != nil {
+			return fmt.Errorf(`cannot create bucket "%s": %w`, bucketId, err)
+		}
+		s.logger.Infof(`created bucket "%s"`, bucketId)
+	}
+
 	// Create temp file
 	csvFile, err := ioutil.TempFile(os.TempDir(), "keboola-csv")
 	if err != nil {
@@ -195,29 +220,13 @@ func (s *Service) importToKbc(webhookHash string) error {
 	}()
 
 	// Create CSV file
-	webhook, err := s.storage.Fetch(webhookHash, csvFile)
-	if err != nil {
+	if _, err = s.storage.Fetch(webhookHash, csvFile); err != nil {
 		return err
 	}
 	s.logger.Infof(`fetched "%s" to CSV file "%s"`, webhook.Hash, csvFile.Name())
 
-	// Parse tableID
-	parts := strings.Split(webhook.TableId, ".")
-	if len(parts) != 3 {
-		return fmt.Errorf(`invalid table ID: %s`, webhook.TableId)
-	}
-	bucketId := strings.Join(parts[0:2], ".")
-
-	// Create bucket if not exists
-	if !s.storageApi.BucketExists(bucketId) {
-		if _, err := s.storageApi.CreateBucket(parts[0], parts[1], parts[1]); err != nil {
-			return fmt.Errorf(`cannot create bucket "%s": %w`, bucketId, err)
-		}
-		s.logger.Infof(`created bucket "%s"`, bucketId)
-	}
-
 	// Create file resource
-	fileResource, err := s.storageApi.CreateFileResource(fmt.Sprintf("webhook-%s.csv", webhook.Hash))
+	fileResource, err := apiWithToken.CreateFileResource(fmt.Sprintf("webhook-%s.csv", webhook.Hash))
 	if err != nil {
 		return fmt.Errorf(`cannot create file resource: %w`, err)
 	}
@@ -227,16 +236,16 @@ func (s *Service) importToKbc(webhookHash string) error {
 	if err != nil {
 		return fmt.Errorf(`cannot upload to S3: %w`, err)
 	}
-
+	
 	// Create table
 	fileId := strconv.Itoa(fileResource.Id)
-	_, err = s.storageApi.CreateTableAsync(webhook.TableId, webhook.TableId, fileId)
+	_, err = apiWithToken.CreateTableAsync(bucketId, tableName, fileId)
 	if err != nil {
 		return fmt.Errorf(`cannot create table "%s": %w`, webhook.TableId, err)
 	}
 
 	// Import table
-	_, err = s.storageApi.ImportTableAsync(webhook.TableId, fileId, true)
+	_, err = apiWithToken.ImportTableAsync(webhook.TableId, fileId, true)
 	if err != nil {
 		return fmt.Errorf(`cannot import to table "%s": %w`, webhook.TableId, err)
 	}

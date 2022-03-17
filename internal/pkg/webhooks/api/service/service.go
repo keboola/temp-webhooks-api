@@ -28,7 +28,7 @@ import (
 )
 
 const (
-	WebhookCheckInterval = 5 * time.Second
+	WebhookCheckInterval = 15 * time.Second
 	HeadersCtxKey        = ctxKey("headers")
 )
 
@@ -99,6 +99,9 @@ func (s *Service) StartCron() {
 
 // checkWebhooks checks if webhook should be imported. See model.Conditions.
 func (s *Service) checkWebhooks() {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
 	// Get all
 	items, err := s.storage.AllWebhooks()
 	if err != nil {
@@ -119,6 +122,10 @@ func (s *Service) checkWebhooks() {
 			s.logger.Error(err.Error())
 			continue
 		}
+		if count == 0 {
+			s.logger.Infof(`skipped import "%s": count=0`, webhook.Hash)
+			continue
+		}
 
 		// Check
 		if webhook.Conditions.ShouldImport(count, time.Since(webhook.ImportedAt), webhook.Size) {
@@ -129,10 +136,13 @@ func (s *Service) checkWebhooks() {
 				}()
 				if err := s.importToKbc(string(webhook.Hash)); err != nil {
 					s.logger.Errorf(`cannot import "%s": %w`, webhook.Hash, err)
+					return
 				}
+				s.logger.Infof(`IMPORTED to "%s"`, webhook.Hash)
 			}()
 		} else {
 			s.logger.Infof(`skipped import "%s": condition=false`, webhook.Hash)
+			continue
 		}
 	}
 }
@@ -240,10 +250,13 @@ func (s *Service) importToKbc(webhookHash string) error {
 
 	// Create bucket if not exists
 	if !apiWithToken.BucketExists(bucketId) {
-		if _, err := apiWithToken.CreateBucket(parts[1], parts[0], parts[1]); err != nil {
+		bucketName := strings.TrimPrefix(parts[1], "c-")
+		if _, err := apiWithToken.CreateBucket(bucketName, parts[0], parts[1]); err != nil {
 			return fmt.Errorf(`cannot create bucket "%s": %w`, bucketId, err)
 		}
 		s.logger.Infof(`created bucket "%s"`, bucketId)
+	} else {
+		s.logger.Infof(`bucket "%s" exists`, bucketId)
 	}
 
 	// Create temp file

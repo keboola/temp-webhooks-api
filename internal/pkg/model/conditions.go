@@ -76,6 +76,10 @@ func (c *Conditions) SetTime(str *string) error {
 }
 
 func (c *Conditions) ShouldImport(count uint, time time.Duration, size uint64) bool {
+	if count == 0 {
+		return false
+	}
+
 	if c.Count == nil && c.Time == nil && c.Size == nil {
 		*c.Count = DefaultCount
 	}

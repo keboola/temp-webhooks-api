@@ -31,13 +31,13 @@ func TestPostCreateTable(t *testing.T) {
 
 	bucketName := "test"
 	bucketId := "in.c-test"
-	tableName := fmt.Sprintf("table-%d", int(time.Now().UnixNano()))
+	tableName := fmt.Sprintf("table-%d-x", int(time.Now().UnixNano()))
 	tableId := fmt.Sprintf("%s.%s", bucketId, tableName)
 
-	// Ignore bucket already exists error (TODO do not ignore other errors ;o)
+	// Skip bucket exists error
 	_, _ = api.CreateBucketAsync(bucketName, "in", "")
 
-	_, err = api.CreateTableAsync(tableId, tableName, strconv.Itoa(fileId))
+	_, err = api.CreateTableAsync(tableId, tableId, strconv.Itoa(fileId))
 	assert.NoError(t, err)
 
 	_, err = api.ImportTableAsync(tableId, strconv.Itoa(fileId), false)

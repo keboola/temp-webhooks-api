@@ -115,7 +115,7 @@ var _ = Service("webhooks", func() {
 		Meta("swagger:summary", "Register a new webhook.")
 		Payload(func() {
 			Attribute("tableId", String, "ID of table to create the import webhook on", func() {
-				Example("in.c-my-bucket.my-table")
+				Example("in.c-my-bucket.my_table")
 			})
 			Attribute("token", String, "Storage token to the project", func() {
 				Example("my-storage-api-token")

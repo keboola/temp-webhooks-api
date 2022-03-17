@@ -24,7 +24,8 @@ func (a *Api) GetJobRequest(jobId int) *client.Request {
 	return a.
 		NewRequest(resty.MethodGet, "jobs/{jobId}").
 		SetPathParam("jobId", cast.ToString(jobId)).
-		SetResult(job)
+		SetResult(job).OnResponse(func(response *client.Response) {
+	})
 }
 
 // nolint: unused
@@ -40,7 +41,7 @@ func waitForJob(a *Api, parentRequest *client.Request, job *model.Job, onJobSucc
 			}
 			return
 		} else if job.Status == "error" {
-			err := fmt.Errorf("job failed: %v", job.Results)
+			err := fmt.Errorf("job failed: %v", job.Error.Message)
 			response.SetErr(err)
 			return
 		}

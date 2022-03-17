@@ -28,7 +28,7 @@ func New(db *gorm.DB, logger log.Logger) *Storage {
 }
 
 func (s *Storage) AllWebhooks() (webhooks []*model.Webhook, err error) {
-	return webhooks, s.db.Find(webhooks).Error
+	return webhooks, s.db.Find(&webhooks).Error
 }
 
 func (s *Storage) Get(hashStr string) (*model.Webhook, error) {

@@ -68,6 +68,18 @@ func (s *Storage) UpdateWebhook(webhookHash string, conditions model.Conditions)
 	return webhook, err
 }
 
+func (s *Storage) FlushData(webhookHash string) (result string, err error) {
+	// Get webhook, select for update
+	err = s.db.Transaction(func(tx *gorm.DB) error {
+		_, err := getWebhook(webhookHash, tx.Clauses(clause.Locking{Strength: "SELECT"}))
+		if err != nil {
+			return err
+		}
+		return err
+	})
+	return "ok", err
+}
+
 func (s *Storage) WriteRow(webhookHash string, headers, body string) (webhook *model.Webhook, count uint64, err error) {
 	var countInt int64
 	err = s.db.Transaction(func(tx *gorm.DB) error {

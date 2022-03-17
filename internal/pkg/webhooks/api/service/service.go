@@ -145,6 +145,11 @@ func (s *Service) Update(_ context.Context, payload *webhooks.UpdatePayload) (re
 func (s *Service) Flush(_ context.Context, payload *webhooks.FlushPayload) (res string, err error) {
 	// Create conditions
 
+	err = s.storage.FetchData(*payload.Hash)
+	if err != nil {
+		return "error", err
+	}
+
 	return "ok", nil
 }
 

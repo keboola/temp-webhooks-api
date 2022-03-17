@@ -8,8 +8,8 @@ import (
 	"github.com/keboola/temp-webhooks-api/internal/pkg/model"
 )
 
-func (a *Api) PostTableImportAsync(tableId string, fileId string) (model.Job, error) {
-	response := a.PostTableImportAsyncRequest(tableId, fileId).Send().Response
+func (a *Api) ImportTableAsync(tableId string, fileId string, incremental bool) (model.Job, error) {
+	response := a.ImportTableAsyncRequest(tableId, fileId, incremental).Send().Response
 
 	if response.HasResult() {
 		return *response.Result().(*model.Job), nil
@@ -17,13 +17,17 @@ func (a *Api) PostTableImportAsync(tableId string, fileId string) (model.Job, er
 	return model.Job{}, response.Err()
 }
 
-func (a *Api) PostTableImportAsyncRequest(tableId string, fileId string) *client.Request {
+func (a *Api) ImportTableAsyncRequest(tableId string, fileId string, incremental bool) *client.Request {
 	job := &model.Job{}
+	body := map[string]string{
+		"dataFileId": fileId,
+	}
+	if incremental {
+		body["incremental"] = "1"
+	}
 	request := a.
 		NewRequest(resty.MethodPost, fmt.Sprintf("tables/%s/import-async", tableId)).
-		SetFormBody(map[string]string{
-			"dataFileId": fileId,
-		}).
+		SetFormBody(body).
 		SetResult(job)
 	request.
 		OnSuccess(waitForJob(a, request, job, nil))

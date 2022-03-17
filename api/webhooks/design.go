@@ -17,6 +17,7 @@ var _ = API("webhooks", func() {
 	Server("webhooks", func() {
 		Host("production", func() {
 			URI("http://localhost:8888")
+			URI("http://20.67.180.30:8888")
 		})
 	})
 })

@@ -8,9 +8,9 @@ properties:
         image: keboolawebhooks.azurecr.io/webhooks:latest
         environmentVariables:
           - name: KBC_STORAGE_API_HOST
-            value: https://connection.keboola.com
+            value: connection.keboola.com
           - name: SERVICE_HOST
-            value: localhost:8888
+            value: 20.67.180.30:8888
           - name: SERVICE_MYSQL_DSN
             value: user:pass@tcp(localhost:3306)/db
         resources:

@@ -48,3 +48,11 @@ func TestTooLong(t *testing.T) {
 	err := cond.SetTime(&testedTime)
 	assert.Contains(t, err.Error(), "time is too high")
 }
+
+func TestInvalidTime(t *testing.T) {
+	t.Parallel()
+	cond := NewConditions()
+	testedTime := "fsf"
+	err := cond.SetTime(&testedTime)
+	assert.Contains(t, err.Error(), "time: invalid duration \"fsf\"")
+}

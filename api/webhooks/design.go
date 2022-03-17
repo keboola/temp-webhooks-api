@@ -8,7 +8,7 @@ import (
 
 var _ = API("webhooks", func() {
 	Title("Webhooks Service")
-	Description("A service for webhooks.")
+	Description("<h3>How does it work</h3>\n<ol>\n    <li> register a webhook using /webhook endpoint. You will receive a URL with HASH where you can send data It\n        requires:\n        <ul>\n            <li>STORAGE token in Keboola</li>\n            <li>name of table where the data should be stored in. If it doesn't exists, it will be created</li>\n            <li>Optionaly you can define Conditions</li>\n        </ul>\n    </li>\n    <li>\n        Then you can send data on the provided URL\n    </li>\n    <li>\n        Based on Conditions, the webhook app sends provided data to specified table in Keboola\n    </li>\n    <li>You can send the data to Keboola manualy calling /webhook/HASH/flush.</li>\n    <li> register a webhook using /webhook endpoint. You will receive a URL with HASH where you can send data It\n        requires - STORAGE token in Keboola and\n    </li>\n</ol>\n<h4>\n    Conditions\n</h4>\n<ul>\n    <li> Webhook service sends the data to Keboola if one of the following condition complies\n   <ul>\n       <li>time - each X seconds/minutes</li>\n       <li>size - in bulk of X KB/MB</li>\n       <li>rows - in bulk of N rows. Default value is 1000</li>\n   </ul>\n    </li>\n    <li>You can specify this conditions when registering the webhook using POST /webhook endpoint or update it using PUT\n        /webhook/{hash}</li>\n    \n</ul>")
 	Version("1.0")
 	HTTP(func() {
 		Consumes("application/json")
@@ -70,7 +70,7 @@ var registerResult = ResultType("application/vnd.webhooks.register.result", func
 
 	Attributes(func() {
 		Attribute("url", String, "Webhook url", func() {
-			Example("https://webhooks.keboola.com/import/yljBSN5QmXRXFFs5Y7GEY")
+			Example("https://webhooks.keboola.com/webhook/ljBSN5QmXRXFFs5Y7GEY/import")
 		})
 		Required("url")
 	})

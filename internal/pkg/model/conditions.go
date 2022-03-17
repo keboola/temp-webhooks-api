@@ -5,10 +5,17 @@ import (
 	"time"
 )
 
+const (
+	MaxCount     uint          = 10000             // 10k rows
+	MaxTime      time.Duration = 30 * time.Minute  // 30 min
+	MaxSize      uint64        = 100 * 1024 * 1024 // 100MB
+	DefaultCount uint          = 1000
+)
+
 type Conditions struct {
-	Count *int
+	Count *uint
 	Time  *time.Duration
-	Size  *int64
+	Size  *uint64
 }
 
 func NewConditions() Conditions {
@@ -19,48 +26,48 @@ func NewConditions() Conditions {
 	}
 }
 
-const MAX_COUNT int = 10000                    // 10k rows
-const MAX_TIME int64 = int64(30 * time.Minute) // 30 min
-const MAX_SIZE int64 = 100 * 1024 * 1024       // 100MB
-
-const DEFAULT_SIZE int = 1000 // 100MB
-
-func (c Conditions) SetCount(count int) error {
-	*c.Count = count
+func (c *Conditions) SetCount(count *uint) error {
+	c.Count = count
 	return nil
 }
 
-func (c Conditions) SetTime(str string) error {
+func (c *Conditions) SetTime(str *string) error {
+	if str == nil {
+		c.Time = nil
+		return nil
+	}
 
-	seconds, err := time.ParseDuration(str)
+	duration, err := time.ParseDuration(*str)
 	if err != nil {
 		return err
 	}
-	*c.Time = time.Second * seconds
+	*c.Time = duration
 	return nil
 }
 
-func (c Conditions) SetSize(str string) error {
+func (c *Conditions) SetSize(str *string) error {
+	if str == nil {
+		c.Size = nil
+		return nil
+	}
 
-	parsed, err := strconv.ParseInt(str, 0, 64)
+	parsed, err := strconv.ParseUint(*str, 0, 64)
 	*c.Size = parsed
 	return err
 }
 
-func (c Conditions) ReachCondition(count int, time time.Duration, size int64) bool {
+func (c *Conditions) ReachCondition(count uint, time time.Duration, size uint64) bool {
 	if c.Count == nil && c.Time == nil && c.Size == nil {
-		*c.Count = DEFAULT_SIZE
+		*c.Count = DefaultCount
 	}
-
-	if count > *c.Count {
+	if c.Count != nil && count > *c.Count {
 		return true
 	}
-	if time > *c.Time {
+	if c.Time != nil && time > *c.Time {
 		return true
 	}
-	if size > *c.Size {
+	if c.Size != nil && size > *c.Size {
 		return true
 	}
-
 	return false
 }

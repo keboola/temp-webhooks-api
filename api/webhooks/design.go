@@ -99,7 +99,7 @@ var _ = Service("webhooks", func() {
 			})
 			Attribute("conditions", func() {
 				Description("Import conditions. If at least one is met import to the table occurs.")
-				Attribute("count", Int, "Batch will be imported when the given number of records is reached.", func() {
+				Attribute("count", UInt, "Batch will be imported when the given number of records is reached.", func() {
 					Example(1000)
 				})
 				Attribute("time", String, "Batch will be imported when time from the first request expires ", func() {

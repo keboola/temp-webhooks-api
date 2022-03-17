@@ -131,9 +131,15 @@ func (s *Service) Register(_ context.Context, payload *webhooks.RegisterPayload)
 	// Create conditions
 	conditions := model.NewConditions()
 	if payload.Conditions != nil {
-		// conditions.SetCount(payload.Conditions.Count)
-		// conditions.SetTime(payload.Conditions.Time)
-		// conditions.SetSize(payload.Conditions.Size)
+		if err := conditions.SetCount(payload.Conditions.Count); err != nil {
+			return nil, err
+		}
+		if err := conditions.SetTime(payload.Conditions.Time); err != nil {
+			return nil, err
+		}
+		if err := conditions.SetSize(payload.Conditions.Size); err != nil {
+			return nil, err
+		}
 	}
 
 	// Create webhook

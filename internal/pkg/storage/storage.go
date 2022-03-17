@@ -45,7 +45,8 @@ func (s *Storage) Register(token model.Token, tableId string, conditions model.C
 	return webhook, s.db.Create(webhook).Error
 }
 
-func (s *Storage) WriteRow(webhookHash string, headers, body string) (webhook *model.Webhook, err error) {
+func (s *Storage) WriteRow(webhookHash string, headers, body string) (webhook *model.Webhook, count uint64, err error) {
+	var countInt int64
 	err = s.db.Transaction(func(tx *gorm.DB) error {
 		// Get webhook, select for update
 		webhook, err = getWebhook(webhookHash, tx.Clauses(clause.Locking{Strength: "UPDATE"}))
@@ -70,9 +71,14 @@ func (s *Storage) WriteRow(webhookHash string, headers, body string) (webhook *m
 		size := uint64(len(headers) + len(body))
 		tx.Model(&model.Webhook{}).Where("id = ?", webhook.Id).Update("size", webhook.Size+size)
 
+		// Get current batch size
+		if err := tx.Model(&model.Row{}).Where("webhook = ?", webhook.Id).Count(&countInt).Error; err != nil {
+			return fmt.Errorf("cannot count rows: %w", err)
+		}
+
 		return nil
 	})
-	return webhook, err
+	return webhook, uint64(countInt), err
 }
 
 func (s *Storage) MigrateDb() error {

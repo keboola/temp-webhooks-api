@@ -112,13 +112,13 @@ func (s *Service) Import(ctx context.Context, payload *webhooks.ImportPayload, b
 
 	// Write CSV row
 	headers := json.MustEncodeString(ctx.Value(HeadersCtxKey).(http.Header), true)
-	webhook, err := s.storage.WriteRow(payload.Hash, headers, string(body))
+	webhook, count, err := s.storage.WriteRow(payload.Hash, headers, string(body))
 	if err != nil {
 		return nil, err
 	}
 
 	s.logger.Infof("RECEIVED webhook, tableId=\"%s\"", webhook.TableId)
-	return &webhooks.ImportResult{RecordsInBatch: 0}, nil
+	return &webhooks.ImportResult{RecordsInBatch: count}, nil
 }
 
 func (s *Service) Register(_ context.Context, payload *webhooks.RegisterPayload) (res *webhooks.RegistrationResult, err error) {

@@ -150,7 +150,7 @@ func (s *Service) checkWebhooks() {
 func (s *Service) IndexRoot(_ context.Context) (res *webhooks.Index, err error) {
 	res = &webhooks.Index{
 		API:           "webhooks",
-		Documentation: "https://webhooks.keboola.com/documentation",
+		Documentation: fmt.Sprintf(`"https://%s/documentation"`, s.host),
 	}
 	return res, nil
 }

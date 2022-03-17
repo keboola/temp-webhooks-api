@@ -3,7 +3,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8">
-    <title>Swagger UI</title>
+    <title>Keboola Webhooks API</title>
     <link rel="stylesheet" type="text/css" href="./swagger-ui.css" />
     <link rel="icon" type="image/png" href="./favicon-32x32.png" sizes="32x32" />
     <link rel="icon" type="image/png" href="./favicon-16x16.png" sizes="16x16" />
@@ -27,7 +27,24 @@
         margin:0;
         background: #fafafa;
       }
+
+      .swagger-ui .topbar {
+        background: #228dff;
+      }
     </style>
+    <script type="text/javascript">
+      (function () {
+        window.addEventListener("load", function () {
+          setTimeout(function () {
+            var logo = document.getElementsByClassName('link'); //For Changing The Link On The Logo Image
+            logo[0].href = "https://keboola.com/";
+            logo[0].target = "_blank";
+            logo[0].children[0].alt = "Keboola";
+            logo[0].children[0].src = "https://assets.website-files.com/5e21dc6f4c5acf29c35bb32c/5e7263a8bf518b1d3be1760a_256.png";
+          });
+        });
+      })();
+    </script>
   </head>
 
   <body>

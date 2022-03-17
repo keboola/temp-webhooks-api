@@ -1,0 +1,48 @@
+apiVersion: 2019-12-01
+location: northeurope
+name: keboolawebhooks
+properties:
+  containers:
+    - name: api
+      properties:
+        image: keboolawebhooks.azurecr.io/webhooks:latest
+        environmentVariables:
+          - name: KBC_STORAGE_API_HOST
+            value: https://connection.keboola.com
+          - name: SERVICE_HOST
+            value: localhost:8888
+          - name: SERVICE_MYSQL_DSN
+            value: user:pass@tcp(mysql:3306)/db
+        resources:
+          requests:
+            cpu: 1
+            memoryInGb: 1.5
+        ports:
+          - port: 8888
+    - name: mysql
+      properties:
+        image: mariadb:10
+        environmentVariables:
+          - name: MYSQL_ROOT_PASSWORD
+            value: root
+          - name: MYSQL_USER
+            value: user
+          - name: MYSQL_PASSWORD
+            value: pass
+          - name: MYSQL_DATABASE
+            value: db
+        resources:
+          requests:
+            cpu: 1
+            memoryInGb: 1.5
+  osType: Linux
+  ipAddress:
+    type: Public
+    ports:
+      - protocol: tcp
+        port: 8888
+  imageRegistryCredentials:
+    - server: keboolawebhooks.azurecr.io
+      username: keboolawebhooks
+      password: 3qdfylf=YMJT3fzj6T8oYa4PyaLxYKaX
+type: Microsoft.ContainerInstance/containerGroups

@@ -22,6 +22,7 @@ services:
       MYSQL_DATABASE: db
 
   api:
+    image: keboolawebhooks.azurecr.io/webhooks
     build:
       context: .
       dockerfile: Dockerfile-api

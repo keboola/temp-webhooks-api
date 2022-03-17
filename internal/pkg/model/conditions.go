@@ -43,6 +43,10 @@ func (c *Conditions) SetTime(str *string) error {
 	if err != nil {
 		return err
 	}
+
+	if duration.Seconds() > MaxTime.Seconds() {
+		return errors.New("time is too high")
+	}
 	c.Time = &duration
 	return nil
 }
@@ -55,10 +59,13 @@ func (c *Conditions) SetSize(str *string) error {
 
 	var v datasize.ByteSize
 	err := v.UnmarshalText([]byte(*str))
+	if err != nil {
+		return errors.New("invalid size value. use format X MB|KB")
+	}
 
 	bytes := v.Bytes()
 	if bytes > MaxSize {
-		return errors.New("size is too big")
+		return errors.New("au, size is too big")
 	}
 
 	c.Size = &bytes

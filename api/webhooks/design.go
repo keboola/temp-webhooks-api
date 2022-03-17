@@ -112,9 +112,17 @@ var _ = Service("webhooks", func() {
 			Required("tableId", "token")
 		})
 		Result(registerResult)
+		Error("UnauthorizedError", func() {
+			Description("Error returned when the specified token is invalid.")
+			Attribute("message", func() {
+				Example("Invalid access token.")
+			})
+			Required("message")
+		})
 		HTTP(func() {
 			POST("register")
 			Response(StatusOK)
+			Response("UnauthorizedError", StatusUnauthorized)
 		})
 	})
 
@@ -127,10 +135,18 @@ var _ = Service("webhooks", func() {
 			Required("hash")
 		})
 		Result(importResult)
+		Error("WebhookNotFoundError", func() {
+			Description("Error returned when no webhook was found under the specified hash.")
+			Attribute("message", func() {
+				Example("Invalid access token.")
+			})
+			Required("message")
+		})
 		HTTP(func() {
 			POST("import/{hash}")
 			SkipRequestBodyEncodeDecode()
 			Response(StatusOK)
+			Response("WebhookNotFoundError", StatusNotFound)
 		})
 	})
 

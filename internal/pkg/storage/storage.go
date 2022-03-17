@@ -7,6 +7,7 @@ import (
 
 	"github.com/keboola/temp-webhooks-api/internal/pkg/log"
 	"github.com/keboola/temp-webhooks-api/internal/pkg/model"
+	"github.com/keboola/temp-webhooks-api/internal/pkg/webhooks/api/gen/webhooks"
 	gonanoid "github.com/matoous/go-nanoid/v2"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -51,7 +52,7 @@ func (s *Storage) WriteRow(webhookHash string, headers, body string) (webhook *m
 		// Get webhook, select for update
 		webhook, err = getWebhook(webhookHash, tx.Clauses(clause.Locking{Strength: "UPDATE"}))
 		if err != nil {
-			return err
+			return &webhooks.WebhookNotFoundError{Message: err.Error()}
 		}
 
 		// Create row

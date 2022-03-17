@@ -236,18 +236,21 @@ func (s *Service) importToKbc(webhookHash string) error {
 	if err != nil {
 		return fmt.Errorf(`cannot upload to S3: %w`, err)
 	}
-	
-	// Create table
-	fileId := strconv.Itoa(fileResource.Id)
-	_, err = apiWithToken.CreateTableAsync(bucketId, tableName, fileId)
-	if err != nil {
-		return fmt.Errorf(`cannot create table "%s": %w`, webhook.TableId, err)
-	}
 
-	// Import table
-	_, err = apiWithToken.ImportTableAsync(webhook.TableId, fileId, true)
-	if err != nil {
-		return fmt.Errorf(`cannot import to table "%s": %w`, webhook.TableId, err)
+	// Import CSV
+	fileId := strconv.Itoa(fileResource.Id)
+	if apiWithToken.TableExists(webhook.TableId) {
+		// Import table
+		_, err = apiWithToken.ImportTableAsync(webhook.TableId, fileId, true)
+		if err != nil {
+			return fmt.Errorf(`cannot import to table "%s": %w`, webhook.TableId, err)
+		}
+	} else {
+		// Create table
+		_, err = apiWithToken.CreateTableAsync(bucketId, tableName, fileId)
+		if err != nil {
+			return fmt.Errorf(`cannot create table "%s": %w`, webhook.TableId, err)
+		}
 	}
 
 	return nil

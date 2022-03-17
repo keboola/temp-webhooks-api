@@ -135,7 +135,7 @@ func (s *Storage) Fetch(webhookHash string, target io.Writer) (webhook *model.We
 		}
 
 		// Select rows
-		rows, err := tx.Table("data").Where("webhook = ?", webhook.Id).Rows()
+		rows, err := tx.Table("data").Where("webhook = ?", webhook.Id).Order("timestamp").Rows()
 		if err != nil {
 			return err
 		}

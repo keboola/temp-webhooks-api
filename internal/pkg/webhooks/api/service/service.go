@@ -10,6 +10,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/avast/retry-go/v4"
@@ -34,6 +35,8 @@ const (
 type ctxKey string
 
 type Service struct {
+	lock       *sync.Mutex
+	updating   map[model.WebhookHash]bool
 	ctx        context.Context
 	host       string
 	envs       *env.Map
@@ -67,6 +70,8 @@ func New(ctx context.Context, envs *env.Map, stdLogger *stdLog.Logger) (webhooks
 
 	// Create service
 	s := &Service{
+		lock:       &sync.Mutex{},
+		updating:   make(map[model.WebhookHash]bool),
 		ctx:        ctx,
 		host:       serviceHost,
 		envs:       envs,
@@ -94,8 +99,41 @@ func (s *Service) StartCron() {
 
 // checkWebhooks checks if webhook should be imported. See model.Conditions.
 func (s *Service) checkWebhooks() {
-	if err := s.storage.ImportData(); err != nil {
+	// Get all
+	items, err := s.storage.AllWebhooks()
+	if err != nil {
 		s.logger.Error(err)
+	}
+
+	// Check each
+	for _, webhook := range items {
+		// Only once
+		if s.updating[webhook.Hash] {
+			s.logger.Infof(`skipped import "%s": in progress`, webhook.Hash)
+			continue
+		}
+
+		// Count rows
+		count, err := s.storage.CountRows(webhook.Id)
+		if err != nil {
+			s.logger.Error(err.Error())
+			continue
+		}
+
+		// Check
+		if webhook.Conditions.ShouldImport(count, time.Since(webhook.ImportedAt), webhook.Size) {
+			s.updating[webhook.Hash] = true
+			go func() {
+				defer func() {
+					s.updating[webhook.Hash] = false
+				}()
+				if err := s.importToKbc(string(webhook.Hash)); err != nil {
+					s.logger.Errorf(`cannot import "%s": %w`, webhook.Hash, err)
+				}
+			}()
+		} else {
+			s.logger.Infof(`skipped import "%s": condition=false`, webhook.Hash)
+		}
 	}
 }
 

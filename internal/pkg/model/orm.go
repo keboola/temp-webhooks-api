@@ -14,6 +14,7 @@ type Webhook struct {
 	Token      string `gorm:"type:VARCHAR(255);not null"`
 	TableId    string `gorm:"type:VARCHAR(1000);not null"`
 	Size       uint64
+	ImportedAt time.Time  `gorm:"not null"`
 	Conditions Conditions `gorm:"embedded;embeddedPrefix:condition_"`
 	Data       []Row      `gorm:"foreignKey:Webhook"` // only for FK definition
 }

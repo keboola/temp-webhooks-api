@@ -27,13 +27,16 @@ func New(db *gorm.DB, logger log.Logger) *Storage {
 	}
 }
 
-// ImportData imports data from memory to the table, if model.Conditions are meet.
-func (s *Storage) ImportData() error {
-	return nil
+func (s *Storage) AllWebhooks() (webhooks []*model.Webhook, err error) {
+	return webhooks, s.db.Find(webhooks).Error
 }
 
 func (s *Storage) Get(hashStr string) (*model.Webhook, error) {
 	return getWebhook(hashStr, s.db)
+}
+
+func (s *Storage) CountRows(webhookId uint32) (uint, error) {
+	return countRows(webhookId, s.db)
 }
 
 func (s *Storage) RegisterWebhook(token model.Token, tableId string, conditions model.Conditions) (*model.Webhook, error) {
@@ -43,6 +46,8 @@ func (s *Storage) RegisterWebhook(token model.Token, tableId string, conditions 
 		ProjectId:  uint32(token.ProjectId()),
 		Token:      token.Token,
 		TableId:    tableId,
+		ImportedAt: time.Now(),
+		Size:       0,
 		Conditions: conditions,
 	}
 	return webhook, s.db.Create(webhook).Error
@@ -80,7 +85,7 @@ func (s *Storage) FlushData(webhookHash string) (result string, err error) {
 	return "ok", err
 }
 
-func (s *Storage) WriteRow(webhookHash string, headers, body string) (webhook *model.Webhook, count uint64, err error) {
+func (s *Storage) WriteRow(webhookHash string, headers, body string) (webhook *model.Webhook, count uint, err error) {
 	var countInt int64
 	err = s.db.Transaction(func(tx *gorm.DB) error {
 		// Get webhook, select for update
@@ -109,13 +114,14 @@ func (s *Storage) WriteRow(webhookHash string, headers, body string) (webhook *m
 		}
 
 		// Get current batch size
+		count, err = countRows(webhook.Id, tx)
 		if err := tx.Model(&model.Row{}).Where("webhook = ?", webhook.Id).Count(&countInt).Error; err != nil {
 			return fmt.Errorf("cannot count rows: %w", err)
 		}
 
 		return nil
 	})
-	return webhook, uint64(countInt), err
+	return webhook, uint(countInt), err
 }
 
 func (s *Storage) Fetch(webhookHash string, target io.Writer) (webhook *model.Webhook, err error) {
@@ -135,7 +141,7 @@ func (s *Storage) Fetch(webhookHash string, target io.Writer) (webhook *model.We
 		}
 
 		// Select rows
-		rows, err := tx.Table("data").Where("webhook = ?", webhook.Id).Order("timestamp").Rows()
+		rows, err := tx.Table("data").Where("webhook = ?", webhook.Id).Order("time").Rows()
 		if err != nil {
 			return err
 		}
@@ -163,8 +169,8 @@ func (s *Storage) Fetch(webhookHash string, target io.Writer) (webhook *model.We
 			return err
 		}
 
-		// Update size
-		if err := tx.Model(&model.Webhook{}).Where("id = ?", webhook.Id).Update("size", uint64(0)).Error; err != nil {
+		// Update size and importedAt
+		if err := tx.Model(&model.Webhook{}).Where("id = ?", webhook.Id).Updates(&model.Webhook{Size: 0, ImportedAt: time.Now()}).Error; err != nil {
 			return err
 		}
 
@@ -186,6 +192,14 @@ func (s *Storage) MigrateDb() error {
 		return fmt.Errorf("db migration: cannot release lock: %w", err)
 	}
 	return nil
+}
+
+func countRows(webhookId uint32, db *gorm.DB) (uint, error) {
+	var countInt int64
+	if err := db.Model(&model.Row{}).Where("webhook = ?", webhookId).Count(&countInt).Error; err != nil {
+		return 0, fmt.Errorf("cannot count rows: %w", err)
+	}
+	return uint(countInt), nil
 }
 
 func getWebhook(hashStr string, db *gorm.DB) (*model.Webhook, error) {

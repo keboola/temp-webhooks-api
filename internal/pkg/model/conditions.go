@@ -75,7 +75,7 @@ func (c *Conditions) SetTime(str *string) error {
 	return nil
 }
 
-func (c *Conditions) ReachCondition(count uint, time time.Duration, size uint64) bool {
+func (c *Conditions) ShouldImport(count uint, time time.Duration, size uint64) bool {
 	if c.Count == nil && c.Time == nil && c.Size == nil {
 		*c.Count = DefaultCount
 	}

@@ -1,8 +1,10 @@
 package storage
 
 import (
+	"encoding/csv"
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/keboola/temp-webhooks-api/internal/pkg/log"
@@ -102,6 +104,59 @@ func (s *Storage) WriteRow(webhookHash string, headers, body string) (webhook *m
 		return nil
 	})
 	return webhook, uint64(countInt), err
+}
+
+func (s *Storage) FetchData(webhookHash string) error {
+	csvWriter := csv.NewWriter(os.Stdout)
+
+	// Write header
+	if err := csvWriter.Write([]string{"timestamp", "headers", "body"}); err != nil {
+		return err
+	}
+
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		// Get webhook, select for update
+		webhook, err := getWebhook(webhookHash, tx.Clauses(clause.Locking{Strength: "UPDATE"}))
+		if err != nil {
+			return err
+		}
+
+		// Select rows
+		rows, err := s.db.Table("data").Where("webhook = ?", webhook.Id).Rows()
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		// Load rows
+		for rows.Next() {
+			row := &model.Row{}
+			if err := rows.Scan(row); err != nil {
+				return err
+			}
+
+			csvRow := []string{row.Time.Format(time.RFC3339), row.Headers, row.Body}
+			if err := csvWriter.Write(csvRow); err != nil {
+				return err
+			}
+		}
+
+		if err := rows.Err(); err != nil {
+			return err
+		}
+
+		// Clear rows
+		if err := s.db.Table("data").Where("webhook = ?", webhook.Id).Delete(&model.Row{}).Error; err != nil {
+			return err
+		}
+
+		// Update size
+		if err := tx.Model(&model.Webhook{}).Where("id = ?", webhook.Id).Update("size", uint64(0)).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
 }
 
 func (s *Storage) MigrateDb() error {

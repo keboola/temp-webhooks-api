@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/keboola/temp-webhooks-api/internal/pkg/env"
 	"github.com/keboola/temp-webhooks-api/internal/pkg/s3"
 	"github.com/keboola/temp-webhooks-api/internal/pkg/utils/testproject"
@@ -34,7 +33,6 @@ func TestPostCreateTable(t *testing.T) {
 	bucketId := "in.c-test"
 	tableName := fmt.Sprintf("table-%d", int(time.Now().UnixNano()))
 	tableId := fmt.Sprintf("%s.%s", bucketId, tableName)
-	spew.Dump(tableId)
 
 	// Ignore bucket already exists error (TODO do not ignore other errors ;o)
 	_, _ = api.CreateBucketAsync(bucketName, "in", "")

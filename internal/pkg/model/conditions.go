@@ -1,8 +1,10 @@
 package model
 
 import (
-	"strconv"
+	"errors"
 	"time"
+
+	"github.com/c2h5oh/datasize"
 )
 
 const (
@@ -51,8 +53,16 @@ func (c *Conditions) SetSize(str *string) error {
 		return nil
 	}
 
-	parsed, err := strconv.ParseUint(*str, 0, 64)
-	c.Size = &parsed
+	var v datasize.ByteSize
+	err := v.UnmarshalText([]byte(*str))
+
+	bytes := v.Bytes()
+	if bytes > MaxSize {
+		return errors.New("size is too big")
+	}
+
+	c.Size = &bytes
+
 	return err
 }
 

@@ -13,7 +13,7 @@ func TestSetSize(t *testing.T) {
 	size := "10MB"
 	err := cond.SetSize(&size)
 	assert.NoError(t, err)
-	assert.Equal(t, uint64(10485760), *cond.Size)
+	assert.Equal(t, float64(10), cond.Size.MBytes())
 }
 
 func TestInvalidUnit(t *testing.T) {

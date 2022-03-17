@@ -65,7 +65,7 @@ func (c *Conditions) SetTime(str *string) error {
 
 	duration, err := time.ParseDuration(*str)
 	if err != nil {
-		return err
+		return errors.New("invalid time value. use format Xs|m")
 	}
 
 	if duration > MaxTime {

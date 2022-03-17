@@ -168,6 +168,7 @@ var _ = Service("webhooks", func() {
 			Field(1, "hash", String, "Authorization hash", func() {
 				Example("yljBSN5QmXRXFFs5Y7GEY")
 			})
+			Required("hash")
 		})
 		Result(String, func() {
 			Example("OK")

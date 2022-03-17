@@ -4,7 +4,7 @@ import (
 	"encoding/csv"
 	"errors"
 	"fmt"
-	"os"
+	"io"
 	"time"
 
 	"github.com/keboola/temp-webhooks-api/internal/pkg/log"
@@ -118,17 +118,17 @@ func (s *Storage) WriteRow(webhookHash string, headers, body string) (webhook *m
 	return webhook, uint64(countInt), err
 }
 
-func (s *Storage) FetchData(webhookHash string) error {
-	csvWriter := csv.NewWriter(os.Stdout)
+func (s *Storage) Fetch(webhookHash string, target io.Writer) (webhook *model.Webhook, err error) {
+	csvWriter := csv.NewWriter(target)
 
 	// Write header
 	if err := csvWriter.Write([]string{"timestamp", "headers", "body"}); err != nil {
-		return err
+		return nil, err
 	}
 
-	return s.db.Transaction(func(tx *gorm.DB) error {
+	err = s.db.Transaction(func(tx *gorm.DB) error {
 		// Get webhook, select for update
-		webhook, err := getWebhook(webhookHash, tx.Clauses(clause.Locking{Strength: "UPDATE"}))
+		webhook, err = getWebhook(webhookHash, tx.Clauses(clause.Locking{Strength: "UPDATE"}))
 		if err != nil {
 			return err
 		}
@@ -169,6 +169,7 @@ func (s *Storage) FetchData(webhookHash string) error {
 
 		return nil
 	})
+	return webhook, err
 }
 
 func (s *Storage) MigrateDb() error {

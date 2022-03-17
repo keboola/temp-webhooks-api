@@ -4,8 +4,12 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	stdLog "log"
 	"net/http"
+	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/avast/retry-go/v4"
@@ -14,6 +18,7 @@ import (
 	"github.com/keboola/temp-webhooks-api/internal/pkg/json"
 	"github.com/keboola/temp-webhooks-api/internal/pkg/log"
 	"github.com/keboola/temp-webhooks-api/internal/pkg/model"
+	"github.com/keboola/temp-webhooks-api/internal/pkg/s3"
 	"github.com/keboola/temp-webhooks-api/internal/pkg/storage"
 	"github.com/keboola/temp-webhooks-api/internal/pkg/webhooks/api/gen/webhooks"
 	"gorm.io/driver/mysql"
@@ -57,6 +62,9 @@ func New(ctx context.Context, envs *env.Map, stdLogger *stdLog.Logger) (webhooks
 		return nil, err
 	}
 
+	// Create API
+	api := storageapi.New(context.Background(), logger, storageApiHost, false)
+
 	// Create service
 	s := &Service{
 		ctx:        ctx,
@@ -64,7 +72,7 @@ func New(ctx context.Context, envs *env.Map, stdLogger *stdLog.Logger) (webhooks
 		envs:       envs,
 		logger:     logger,
 		storage:    stg,
-		storageApi: storageapi.New(context.Background(), logger, storageApiHost, false),
+		storageApi: api,
 	}
 	s.StartCron()
 	return s, nil
@@ -110,6 +118,12 @@ func (s *Service) Register(_ context.Context, payload *webhooks.RegisterPayload)
 		return nil, &webhooks.UnauthorizedError{Message: fmt.Sprintf(`Invalid storage token "%s" supplied.`, payload.Token)}
 	}
 
+	// Validate table ID
+	parts := strings.Split(payload.TableID, ".")
+	if len(parts) != 3 {
+		return nil, fmt.Errorf(`invalid table ID: %s`, payload.TableID)
+	}
+
 	// Create conditions
 	conditions, err := conditionsFromPayload(payload.Conditions)
 	if err != nil {
@@ -143,14 +157,11 @@ func (s *Service) Update(_ context.Context, payload *webhooks.UpdatePayload) (re
 }
 
 func (s *Service) Flush(_ context.Context, payload *webhooks.FlushPayload) (res string, err error) {
-	// Create conditions
-
-	err = s.storage.FetchData(*payload.Hash)
-	if err != nil {
-		return "error", err
+	// Import to KBC
+	if err = s.importToKbc(payload.Hash); err != nil {
+		return "", err
 	}
-
-	return "ok", nil
+	return "OK", nil
 }
 
 func (s *Service) Import(ctx context.Context, payload *webhooks.ImportPayload, bodyStream io.ReadCloser) (res *webhooks.ImportResult, err error) {
@@ -169,6 +180,68 @@ func (s *Service) Import(ctx context.Context, payload *webhooks.ImportPayload, b
 
 	s.logger.Infof("RECEIVED webhook, tableId=\"%s\"", webhook.TableId)
 	return &webhooks.ImportResult{RecordsInBatch: count}, nil
+}
+
+func (s *Service) importToKbc(webhookHash string) error {
+	// Create temp file
+	csvFile, err := ioutil.TempFile(os.TempDir(), "keboola-csv")
+	if err != nil {
+		return fmt.Errorf(`cannot create temp file: %w`, err)
+	}
+	defer func() {
+		if err := os.Remove(csvFile.Name()); err != nil {
+			s.logger.Error(err.Error())
+		}
+	}()
+
+	// Create CSV file
+	webhook, err := s.storage.Fetch(webhookHash, csvFile)
+	if err != nil {
+		return err
+	}
+	s.logger.Infof(`fetched "%s" to CSV file "%s"`, webhook.Hash, csvFile.Name())
+
+	// Parse tableID
+	parts := strings.Split(webhook.TableId, ".")
+	if len(parts) != 3 {
+		return fmt.Errorf(`invalid table ID: %s`, webhook.TableId)
+	}
+	bucketId := strings.Join(parts[0:2], ".")
+
+	// Create bucket if not exists
+	if !s.storageApi.BucketExists(bucketId) {
+		if _, err := s.storageApi.CreateBucket(parts[0], parts[1], parts[1]); err != nil {
+			return fmt.Errorf(`cannot create bucket "%s": %w`, bucketId, err)
+		}
+		s.logger.Infof(`created bucket "%s"`, bucketId)
+	}
+
+	// Create file resource
+	fileResource, err := s.storageApi.CreateFileResource(fmt.Sprintf("webhook-%s.csv", webhook.Hash))
+	if err != nil {
+		return fmt.Errorf(`cannot create file resource: %w`, err)
+	}
+
+	// Upload to S3
+	err = s3.UploadFileToS3(csvFile.Name(), fileResource)
+	if err != nil {
+		return fmt.Errorf(`cannot upload to S3: %w`, err)
+	}
+
+	// Create table
+	fileId := strconv.Itoa(fileResource.Id)
+	_, err = s.storageApi.CreateTableAsync(webhook.TableId, webhook.TableId, fileId)
+	if err != nil {
+		return fmt.Errorf(`cannot create table "%s": %w`, webhook.TableId, err)
+	}
+
+	// Import table
+	_, err = s.storageApi.ImportTableAsync(webhook.TableId, fileId, true)
+	if err != nil {
+		return fmt.Errorf(`cannot import to table "%s": %w`, webhook.TableId, err)
+	}
+
+	return nil
 }
 
 func conditionsFromPayload(payload *webhooks.Conditions) (model.Conditions, error) {

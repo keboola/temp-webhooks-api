@@ -162,6 +162,30 @@ var _ = Service("webhooks", func() {
 		})
 	})
 
+	Method("flush", func() {
+		Meta("swagger:summary", "Loads data to connection manually")
+		Payload(func() {
+			Field(1, "hash", String, "Authorization hash", func() {
+				Example("yljBSN5QmXRXFFs5Y7GEY")
+			})
+		})
+		Result(String, func() {
+			Example("OK")
+		})
+		Error("WebhookNotFoundError", func() {
+			Description("Error returned when no webhook was found under the specified hash.")
+			Attribute("message", func() {
+				Example("Webhook with hash \"<hash>\" not found.")
+			})
+			Required("message")
+		})
+		HTTP(func() {
+			POST("webhook/{hash}/flush")
+			Response(StatusOK)
+			Response("WebhookNotFoundError", StatusNotFound)
+		})
+	})
+
 	Method("import", func() {
 		Meta("swagger:summary", "Import data.")
 		Payload(func() {

@@ -142,6 +142,12 @@ func (s *Service) Update(_ context.Context, payload *webhooks.UpdatePayload) (re
 	return &webhooks.UpdateResult{Conditions: webhook.Conditions.Payload()}, nil
 }
 
+func (s *Service) Flush(_ context.Context, payload *webhooks.FlushPayload) (res string, err error) {
+	// Create conditions
+
+	return "ok", nil
+}
+
 func (s *Service) Import(ctx context.Context, payload *webhooks.ImportPayload, bodyStream io.ReadCloser) (res *webhooks.ImportResult, err error) {
 	// Read body
 	body, err := io.ReadAll(bodyStream)

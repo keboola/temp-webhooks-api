@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/keboola/temp-webhooks-api/internal/pkg/api/storageapi"
 	"github.com/keboola/temp-webhooks-api/internal/pkg/env"
 	"github.com/keboola/temp-webhooks-api/internal/pkg/log"
@@ -45,27 +46,20 @@ func New(ctx context.Context, envs *env.Map, stdLogger *stdLog.Logger) (webhooks
 	}
 
 	// Migrate DB
-	lockName := "__db_migration__"
-	lockTimeout := 30
-	if err := db.Exec(`SELECT GET_LOCK(?, ?)`, lockName, lockTimeout).Error; err != nil {
-		return nil, fmt.Errorf("db migration: cannot create lock: %w", err)
-	}
-	if err := db.AutoMigrate(&model.Webhook{}, &model.Conditions{}); err != nil {
-		return nil, fmt.Errorf("db migration: cannot migrate: %w", err)
-	}
-	if err := db.Exec(`SELECT RELEASE_LOCK(?)`, lockName).Error; err != nil {
-		return nil, fmt.Errorf("db migration: cannot release lock: %w", err)
+	stg := storage.New(db, logger)
+	if err := stg.MigrateDb(); err != nil {
+		return nil, err
 	}
 
+	// Create service
 	s := &Service{
 		ctx:        ctx,
 		host:       serviceHost,
 		envs:       envs,
 		logger:     logger,
-		storage:    storage.New(db, logger),
+		storage:    stg,
 		storageApi: storageapi.New(context.Background(), logger, storageApiHost, false),
 	}
-
 	s.StartCron()
 	return s, nil
 }
@@ -103,7 +97,7 @@ func (s *Service) HealthCheck(_ context.Context) (res string, err error) {
 	return "OK", nil
 }
 
-func (s *Service) Import(_ context.Context, payload *webhooks.ImportPayload, bodyStrean io.ReadCloser) (res *webhooks.ImportResult, err error) {
+func (s *Service) Import(ctx context.Context, payload *webhooks.ImportPayload, bodyStream io.ReadCloser) (res *webhooks.ImportResult, err error) {
 	// Get webhook definition
 	webhook, err := s.storage.Get(payload.Hash)
 	if err != nil {
@@ -111,15 +105,17 @@ func (s *Service) Import(_ context.Context, payload *webhooks.ImportPayload, bod
 	}
 
 	// Read body
-	_, err = io.ReadAll(bodyStrean)
+	body, err := io.ReadAll(bodyStream)
 	if err != nil {
 		return nil, fmt.Errorf("cannot read request body: %w", err)
 	}
 
-	//// Write CSV row
-	//if err := webhook.WriteRow([]string{string(body)}); err != nil {
-	//	return nil, err
-	//}
+	// Write CSV row
+	spew.Dump(ctx)
+	headers := "todo"
+	if err := s.storage.WriteRow(webhook, headers, string(body)); err != nil {
+		return nil, err
+	}
 
 	s.logger.Infof("RECEIVED webhook, tableId=\"%s\"", webhook.TableId)
 	return &webhooks.ImportResult{RecordsInBatch: 0}, nil

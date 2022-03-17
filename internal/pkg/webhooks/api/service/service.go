@@ -107,7 +107,7 @@ func (s *Service) Register(_ context.Context, payload *webhooks.RegisterPayload)
 	// Validate token
 	token, err := s.storageApi.GetToken(payload.Token)
 	if err != nil {
-		return nil, &webhooks.UnauthorizedError{Message: err.Error()}
+		return nil, &webhooks.UnauthorizedError{Message: fmt.Sprintf(`Invalid storage token "%s" supplied.`, payload.Token)}
 	}
 
 	// Create conditions

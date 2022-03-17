@@ -126,7 +126,7 @@ func getWebhook(hashStr string, db *gorm.DB) (*model.Webhook, error) {
 	err := db.First(&webhook, "hash = ?", hash).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		if err != nil {
-			return nil, &webhooks.WebhookNotFoundError{Message: err.Error()}
+			return nil, &webhooks.WebhookNotFoundError{Message: fmt.Sprintf(`Webhook with hash "%s" not found.`, hashStr)}
 		}
 	}
 	return &webhook, err

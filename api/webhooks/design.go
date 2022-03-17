@@ -127,7 +127,7 @@ var _ = Service("webhooks", func() {
 		Error("UnauthorizedError", func() {
 			Description("Error returned when the specified token is invalid.")
 			Attribute("message", func() {
-				Example("Invalid access token.")
+				Example("Invalid storage token \"<token>\" supplied.")
 			})
 			Required("message")
 		})
@@ -148,9 +148,17 @@ var _ = Service("webhooks", func() {
 			Required("hash", "conditions")
 		})
 		Result(updateResult)
+		Error("WebhookNotFoundError", func() {
+			Description("Error returned when no webhook was found under the specified hash.")
+			Attribute("message", func() {
+				Example("Webhook with hash \"<hash>\" not found.")
+			})
+			Required("message")
+		})
 		HTTP(func() {
 			PUT("webhook/{hash}")
 			Response(StatusOK)
+			Response("WebhookNotFoundError", StatusNotFound)
 		})
 	})
 
@@ -166,7 +174,7 @@ var _ = Service("webhooks", func() {
 		Error("WebhookNotFoundError", func() {
 			Description("Error returned when no webhook was found under the specified hash.")
 			Attribute("message", func() {
-				Example("Invalid access token.")
+				Example("Webhook with hash \"<hash>\" not found.")
 			})
 			Required("message")
 		})

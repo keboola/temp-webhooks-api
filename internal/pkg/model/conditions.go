@@ -1,7 +1,7 @@
 package model
 
 import (
-	"github.com/oriser/regroup"
+	"strconv"
 	"time"
 )
 
@@ -26,43 +26,25 @@ const MAX_SIZE int64 = 100 * 1024 * 1024       // 100MB
 const DEFAULT_SIZE int = 1000 // 100MB
 
 func (c Conditions) SetCount(count int) error {
-	if count < 0 || count > MAX_COUNT {
-		return Error("invalid count value")
-	}
 	*c.Count = count
 	return nil
 }
 
 func (c Conditions) SetTime(str string) error {
-	var myExp = regroup.MustCompile(`(?P<value>\d+)(?P<unit>s|m)`)
 
-	match, err := myExp.Groups(str)
+	seconds, err := time.ParseDuration(str)
 	if err != nil {
-		panic(err)
+		return err
 	}
-	seconds := match["value"]
-	if match["unit"] == "m" {
-		seconds = seconds * 60
-	}
-
-	*c.Time = seconds
+	*c.Time = time.Second * seconds
 	return nil
 }
 
 func (c Conditions) SetSize(str string) error {
-	var myExp = regroup.MustCompile(`(?P<value>\d+).?(?P<unit>KB|MB)`)
 
-	match, err := myExp.Groups(str)
-	if err != nil {
-		panic(err)
-	}
-	multiplyBy := 1024
-	if match["unit"] == "MB" {
-		multiplyBy = multiplyBy * 1034
-	}
-
-	*c.Size = match["value"] * multiplyBy
-	return nil
+	parsed, err := strconv.ParseInt(str, 0, 64)
+	*c.Size = parsed
+	return err
 }
 
 func (c Conditions) ReachCondition(count int, time time.Duration, size int64) bool {

@@ -29,15 +29,18 @@ func TestPostCreateTable(t *testing.T) {
 	err = s3.UploadFileToS3("/tmp/dat1.csv", response)
 	assert.NoError(t, err)
 
-	bucketName := "test"
-	bucketId := "in.c-test"
-	tableName := fmt.Sprintf("table-%d-x", int(time.Now().UnixNano()))
-	tableId := fmt.Sprintf("%s.%s", bucketId, tableName)
+	bucketName := fmt.Sprintf("test%d", int(time.Now().UnixNano()))
+	tableName := fmt.Sprintf("table-%d", int(time.Now().UnixNano()))
 
-	// Skip bucket exists error
-	_, _ = api.CreateBucketAsync(bucketName, "in", "")
+	assert.False(t, api.BucketExists(fmt.Sprintf("in.c-%s", bucketName)))
 
-	_, err = api.CreateTableAsync(tableId, tableId, strconv.Itoa(fileId))
+	bucket, err := api.CreateBucket(bucketName, "in", "")
+	assert.NoError(t, err)
+
+	assert.True(t, api.BucketExists(bucket.Id))
+
+	tableId := fmt.Sprintf("%s.%s", bucket.Id, tableName)
+	_, err = api.CreateTableAsync(tableId, tableName, strconv.Itoa(fileId))
 	assert.NoError(t, err)
 
 	_, err = api.ImportTableAsync(tableId, strconv.Itoa(fileId), false)

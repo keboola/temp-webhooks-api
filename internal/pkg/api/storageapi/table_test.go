@@ -33,6 +33,7 @@ func TestPostCreateTable(t *testing.T) {
 	tableName := fmt.Sprintf("table-%d", int(time.Now().UnixNano()))
 
 	assert.False(t, api.BucketExists(fmt.Sprintf("in.c-%s", bucketName)))
+	assert.False(t, api.TableExists(fmt.Sprintf("in.c-%s.%s", bucketName, tableName)))
 
 	bucket, err := api.CreateBucket(bucketName, "in", "")
 	assert.NoError(t, err)
@@ -42,6 +43,7 @@ func TestPostCreateTable(t *testing.T) {
 	tableId := fmt.Sprintf("%s.%s", bucket.Id, tableName)
 	_, err = api.CreateTableAsync(tableId, tableName, strconv.Itoa(fileId))
 	assert.NoError(t, err)
+	assert.True(t, api.TableExists(fmt.Sprintf("in.c-%s.%s", bucketName, tableName)))
 
 	_, err = api.ImportTableAsync(tableId, strconv.Itoa(fileId), false)
 	assert.NoError(t, err)

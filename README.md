@@ -41,3 +41,7 @@ The built image has to be pushed to repository `keboolawebhooks.azurecr.io`.
 The deployment was created manually by command: `az container create --resource-group zeleni_webhooks --file deploy-aci.yaml`.
 
 The update can be done by updating the docker image in the repository and restarting the service by command `az container restart --name keboolawebhooks --resource-group zeleni_webhooks`
+
+## License
+
+MIT licensed, see [LICENSE](./LICENSE) file.
